@@ -3,3 +3,4 @@ matplotlib
 requests
 pandas
 dateparser
+emoji
