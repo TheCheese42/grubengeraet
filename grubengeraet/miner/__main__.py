@@ -7,7 +7,7 @@ import miner
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="Grubengerät-miner",
-        description="Ein Webscraper für das UnlimitedWorld.de Forum.",
+        description="Ein Webminer für das UnlimitedWorld.de Forum.",
         epilog="Vergiss nicht auf uwmc.de zu spielen.",
     )
 
