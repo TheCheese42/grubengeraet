@@ -135,7 +135,7 @@ def fetch_and_save(url: str, working_dir: Path, page_num: int) -> None:
     html = fetch_page(url)
     save_page(html, working_dir, page_num)
     if VERBOSE:
-        print(f"Saved page {page_num}.")
+        print(f"Saved page {page_num}")
 
 
 def get_last_page(base_url: str, max: int = 1_000_000) -> int:
@@ -215,7 +215,8 @@ def save_page(html: str, working_dir: Path, page_num: int = 1) -> int:
     Returns:
         int: The amount of bytes written.
     """
-    assert working_dir.is_dir(), "path arg must be a directory."
+    assert working_dir.is_dir(), ("path arg must be a directory, got "
+                                  f"{working_dir}")
     file_path = working_dir / f"page_{str(page_num).zfill(4)}.html"
     with open(file_path, mode="w", encoding="utf-8") as fp:
         return fp.write(html)

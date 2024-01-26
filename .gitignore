@@ -1,6 +1,8 @@
 .vscode/
 *.html
 .flake8
+.html_content/
+data.*
 
 
 # Byte-compiled / optimized / DLL files
@@ -28,7 +30,15 @@ wheels/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
-*.egg
+*.eggparser.add_argument(
+        "-s",
+        "--silent",
+        action="store_true",
+        default=False,
+        required=False,
+        help="Debug Meldungen werden unterdrückt.",
+        dest="silent",
+    )
 MANIFEST
 
 # PyInstaller

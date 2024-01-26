@@ -56,7 +56,8 @@ if __name__ == "__main__":
         action="store",
         type=str,
         required=False,
-        help="Eine Range von Seiten, die analysiert werden soll. Sie sollte "
+        help="NICHT IN BENUTZUNG! "
+             "Eine Range von Seiten, die analysiert werden soll. Sie sollte "
              "das Format \"n1,n2,n3\" haben. n2 ist exklusiv, n3 ist "
              "optional. Nur eine *range flag ist erlaubt.",
         dest="pagerange",
@@ -66,7 +67,8 @@ if __name__ == "__main__":
         action="store",
         type=str,
         required=False,
-        help="Eine Range von Beiträgen, die analysiert werden soll. Sie "
+        help="NICHT IN BENUTZUNG! "
+             "Eine Range von Beiträgen, die analysiert werden soll. Sie "
              "sollte das Format \"n1,n2,n3\" haben. n2 ist exklusiv, n3 ist "
              "optional. Nur eine *range flag ist erlaubt.",
         dest="postrange",
@@ -104,13 +106,11 @@ if __name__ == "__main__":
               "cwd)")
         sys.exit(1)
 
-    csv_string = df.to_csv(args.output)
     if not args.output:
-        print(csv_string)
+        print(df.to_csv())
     else:
         path = Path(args.output)
         if path.is_dir():
             print("Der angegebene Pfad ist ein Verzeichnis.")
             sys.exit(1)
-        with open(path, mode="w", encoding="utf-8") as fp:
-            fp.write(csv_string)
+        df.to_csv(path)
