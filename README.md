@@ -1,7 +1,7 @@
 # Grubengerät
 Web scraper und Statistiker für das UnlimitedWorld.de Forum.
 
-# Installation
+## Installation
 
 Linux/MacOS:
 
@@ -23,9 +23,9 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-# Benutzung
+## Benutzung
 
-## Miner
+### Miner
 
 Zuerst müssen die HTML Seiten heruntergeladen werden.
 Für alle Optionen siehe `python -m grubengeraet.miner -h`.
@@ -44,7 +44,7 @@ python -m grubengeraet.miner --pre-defined wala --threaded
 
 Die Seiten landen standartmäßig im `.html_content` Verzeichnis.
 
-## Extractor
+### Extractor
 
 Danach werden die Daten extrahiert und in eine CSV Datei gepackt.
 Für alle Optionen siehe `python -m grubengeraet.extractor -h`.
@@ -57,7 +57,7 @@ python -m grubengeraet.extractor --output data.csv
 
 Nun sind alle wichtigen Daten in der `data.csv` Datei gesammelt.
 
-## Visualizer
+### Visualizer
 
 Zuletzt müssen die erarbeiteten Daten Visualisiert werden.
 Für alle Optionen siehe `python -m grubengeraet.visualizer -h`.
