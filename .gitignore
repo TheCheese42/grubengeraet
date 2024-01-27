@@ -3,6 +3,11 @@
 .flake8
 .html_content/
 data.*
+*.png
+*.jpg
+*.pdf
+*.svg
+*.txt
 
 
 # Byte-compiled / optimized / DLL files

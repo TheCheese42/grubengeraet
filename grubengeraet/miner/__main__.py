@@ -1,8 +1,9 @@
 import argparse
 import sys
-from pathlib import Path
 import tomllib
-import miner
+from pathlib import Path
+
+from . import miner
 
 
 def get_predefined_url(name: str) -> str:

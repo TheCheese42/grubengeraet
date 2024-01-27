@@ -1,9 +1,8 @@
 import argparse
 import sys
 from pathlib import Path
-from typing import Any
 
-import scraper
+from . import scraper
 
 
 def parse_range(rangestring: str) -> range:

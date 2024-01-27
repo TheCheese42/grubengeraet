@@ -14,7 +14,8 @@ import bs4
 import dateparser
 import pandas as pd
 import regex as re
-from emojis import is_emoji
+
+from .emojis import is_emoji
 
 WHITESPACES = r"\xad͏\u061cᅟᅠ឴឵\u180e\u2000\u2001\u2002\u2003\u2004\u2005"\
               r"\u2006"\
@@ -22,6 +23,26 @@ WHITESPACES = r"\xad͏\u061cᅟᅠ឴឵\u180e\u2000\u2001\u2002\u2003\u2004\u20
               r"\u2060\u2061\u2062\u2063\u2064\u206a\u206b\u206c\u206d\u206e"\
               r"\u206f\u3000\ufeff"\
               r"\ufe0f\ufe0f"\
+
+COLUMNS = [
+    "post_num",
+    "page_num",
+    "author",
+    "creation_datetime",
+    "content",
+    "like_count",
+    "quote_count",
+    "quoted_list",
+    "spoiler_count",
+    "mentions_count",
+    "mentioned_list",
+    "word_count",
+    "emoji_count",
+    "emoji_frequency_mapping",
+    "is_edited",
+    "is_rules_compliant",
+    "rulebreak_reasons",
+]
 
 # bs4 seems to recursively parse the html. Errors sometimes.
 sys.setrecursionlimit(10_000)
@@ -110,26 +131,6 @@ def construct_dataframe(
     """
     if all([pagerange, postrange]):
         raise ValueError("Only one *range parameter can be given.")
-
-    columns = [
-        "post_num",
-        "page_num",
-        "author",
-        "creation_datetime",
-        "content",
-        "like_count",
-        "quote_count",
-        "quoted_list",
-        "spoiler_count",
-        "mentions_count",
-        "mentioned_list",
-        "word_count",
-        "emoji_count",
-        "emoji_frequency_mapping",
-        "is_edited",
-        "is_rules_compliant",
-        "rulebreak_reasons",
-    ]
 
     series_list = []
     for file in sorted(
@@ -226,7 +227,7 @@ def construct_dataframe(
                         rulebreak_reasons,
                     ]
                 ),
-                index=columns,
+                index=COLUMNS,
             )
             series_list.append(message_series)
 
@@ -244,7 +245,7 @@ def construct_dataframe(
     df = pd.DataFrame(
         series_list,
         index=index,
-        columns=columns,
+        columns=COLUMNS,
         copy=False,
     )
     return df
