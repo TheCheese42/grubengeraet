@@ -15,7 +15,7 @@ python -m pip install -r requirements.txt
 
 Windows:
 
-```pwsh
+```sh
 git clone https://github.com/NotYou404/grubengeraet/
 cd grubengeraet
 python -m venv .venv
