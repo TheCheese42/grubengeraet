@@ -53,20 +53,18 @@ class DataExtractor:
 
     @contextmanager
     def change_df(self, df: pd.DataFrame):
+        """
+        Temporarily switch to a different dataframe.
+
+        :param df: The dataframe to be switched to.
+        :type df: pd.DataFrame
+        """
         self._df = self.df
         self.df = df
         try:
             yield
         finally:
             self.df = self._df
-
-    # def __enter__(self, df: pd.DataFrame) -> Self:
-    #     """Temporarily switch the underlying dataframe."""
-    #     self._df = self.df
-    #     self.df = df
-
-    # def __exit__(self, *args, **kwargs) -> None:
-    #     self.df = self._df
 
     @property
     def messages(self) -> int:
@@ -87,6 +85,22 @@ class DataExtractor:
         return datetime.fromisoformat(
             self.df.tail(1).iloc[0]["creation_datetime"]
         ).year
+
+    def lookup_id(self, id: str) -> str:
+        """
+        Lookup a user's name by their id. If None, the user never wrote
+        something in that thread.
+
+        :param id: The user id
+        :type id: str
+        :return: The username
+        :rtype: str
+        """
+        if id == 0:
+            return None
+        if id not in self.df["author_id"]:
+            return None
+        return self.df[self.df["author_id"] == id].iloc[0]["author"]
 
     def get_authors(self) -> list[str]:
         """Get a list of all authors.
@@ -266,7 +280,7 @@ class DataVisualizer:
 
     def top_n_pie(
         self, n: int = 10,
-        criteria: Literal["messages", "words"] = "messages",
+        criterion: Literal["messages", "words"] = "messages",
         radius: float = 1,
     ) -> Figure:
         """
@@ -276,24 +290,24 @@ class DataVisualizer:
 
         :param n: Amount of players to show, defaults to 10
         :type n: int, optional
-        :param criteria: What criteria to sort by, must be one of messages,
+        :param criterion: What criterion to sort by, must be one of messages,
         words
-        :type criteria: Literal["messages", "words"]
+        :type criterion: Literal["messages", "words"]
         :return: The chart
         :rtype: Figure
         """
-        if criteria == "messages":
+        if criterion == "messages":
             authors = self.data_extractor.get_authors_sorted_by_messages()[:n]
         else:
             authors = self.data_extractor.get_authors_sorted_by_words()[:n]
         percents = []
-        if criteria == "messages":
+        if criterion == "messages":
             total_amount = self.data_extractor.messages
         else:
             total_amount = self.data_extractor.words
 
         for author in authors:
-            if criteria == "messages":
+            if criterion == "messages":
                 amount = self.data_extractor.get_messages_from_author(author)
             else:
                 amount = self.data_extractor.get_words_from_author(author)
@@ -302,14 +316,14 @@ class DataVisualizer:
         percents.insert(0, 1 - sum(percents))
         fig, ax = plt.subplots()
         fig.suptitle(f"Top {n} Spieler nach Anzahl " +
-                     ("Beiträgen" if criteria == "messages"
+                     ("Beiträgen" if criterion == "messages"
                       else "Wörtern"))
         ax.pie(percents, labels=authors, autopct='%1.1f%%', radius=radius)
         return fig
 
     def yearly_top_n_barh_percent(
         self, n: int = 10,
-        criteria: Literal["messages", "words"] = "messages",
+        criterion: Literal["messages", "words"] = "messages",
     ) -> Figure:
         """
         <plot>
@@ -317,9 +331,9 @@ class DataVisualizer:
 
         :param n: Amount of top players to show, defaults to 10
         :type n: int, optional
-        :param criteria: What criteria to sort by, must be one of messages,
+        :param criterion: What criterion to sort by, must be one of messages,
         words
-        :type criteria: Literal["messages", "words"]
+        :type criterion: Literal["messages", "words"]
         :return: The chart
         :rtype: Figure
         """
@@ -335,7 +349,7 @@ class DataVisualizer:
             figsize=(4 * cols, 3 * rows)
         )
         fig.suptitle(f"Jährliche Top {n} Spieler nach Anzahl " +
-                     ("Beiträgen" if criteria == "messages"
+                     ("Beiträgen" if criterion == "messages"
                       else "Wörtern"))
 
         for year, ax in zip(range(
@@ -344,7 +358,7 @@ class DataVisualizer:
         ), chain.from_iterable(axes)):
             year_df = self.data_extractor.select_messages_for_year(year)
             with self.data_extractor.change_df(year_df):
-                if criteria == "messages":
+                if criterion == "messages":
                     authors = (
                         self.data_extractor.get_authors_sorted_by_messages(
                         )[:n]
@@ -354,12 +368,12 @@ class DataVisualizer:
                         self.data_extractor.get_authors_sorted_by_words()[:n]
                     )
                 percents = []
-                if criteria == "messages":
+                if criterion == "messages":
                     total_amount = self.data_extractor.messages
                 else:
                     total_amount = self.data_extractor.words
                 for author in authors:
-                    if criteria == "messages":
+                    if criterion == "messages":
                         amount = self.data_extractor.get_messages_from_author(
                             author
                         )
@@ -376,7 +390,7 @@ class DataVisualizer:
                 ax.set_yticks([i + 0.45 for i in y_pos], authors)
                 ax.set_title(f"Top {n} {year}")
                 ax.set_xlabel(
-                    ("Nachrichten" if criteria == "messages" else "Wort") +
+                    ("Nachrichten" if criterion == "messages" else "Wort") +
                     "anteil in %"
                 )
         return fig
