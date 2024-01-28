@@ -1,7 +1,7 @@
+import re
 from pathlib import Path
 from threading import Thread
 from typing import Iterable
-import re
 
 import requests
 
