@@ -46,7 +46,7 @@ if __name__ == "__main__":
         default="",
         type=str,
         required=False,
-        help="Ausgabedatei für die Extrahierten Daten im CSV Format. "
+        help="Ausgabedatei für die Extrahierten Daten im JSON Format. "
              "Standartmäßig werden diese nach stdout ausgegeben.",
         dest="output",
     )
@@ -106,10 +106,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if not args.output:
-        print(df.to_csv())
+        print(df.to_json())
     else:
         path = Path(args.output)
         if path.is_dir():
             print("Der angegebene Pfad ist ein Verzeichnis.")
             sys.exit(1)
-        df.to_csv(path)
+        df.to_json(path)

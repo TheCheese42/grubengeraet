@@ -48,7 +48,7 @@ if __name__ == "__main__":
         action="store",
         type=Path,
         required=True,
-        help="CSV Datei mit den extrahierten Daten.",
+        help="JSON Datei mit den extrahierten Daten.",
         dest="path",
     )
     parser.add_argument(
@@ -121,16 +121,16 @@ if __name__ == "__main__":
         range_arg["postrange"] = parse_range(args.postrange)
 
     try:
-        df = pandas.read_csv(args.path)
+        df = pandas.read_json(args.path)
     except FileNotFoundError:
         print(f"The file {args.path} does not exist.")
         sys.exit(1)
     except pandas.errors.ParserError:
-        print(f"The file {args.path} is not a valid CSV file.")
+        print(f"The file {args.path} is not a valid JSON file.")
         sys.exit(1)
-    if list(df.columns[1:]) != scraper.COLUMNS:
-        print("The CSV file {args.path} was not generated using this version "
-              "of Grubengerät.")
+    if list(df.columns) != scraper.COLUMNS:
+        print(f"The JSON file {args.path} was not generated using this "
+              "version of Grubengerät.")
         sys.exit(1)
 
     visualizer = visualizer.DataVisualizer(
