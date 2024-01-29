@@ -356,7 +356,7 @@ def clean_noisy_tags(message: bs4.element.Tag) -> None:
     for emoji in message.find_all("img", class_="smilie"):
         try:
             emoji.insert_after(".")  # Use emojis as Sentence delimiter
-            alt = emoji["alt"]
+            alt = emoji["data-shortname"]
             emoji.insert_before(alt)
             emoji.decompose()
         except (TypeError, ValueError):
@@ -472,7 +472,7 @@ def get_mapping_of_emojis_and_frequency(
     """
     emojis: dict[str, int] = {}
     for emoji in message.find_all("img", class_="smilie"):
-        alt = emoji["alt"]
+        alt = emoji["data-shortname"]
         if not emojis.get(alt):
             emojis[alt] = 1
             continue
