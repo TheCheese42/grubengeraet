@@ -2,11 +2,11 @@ import math
 from contextlib import contextmanager
 from datetime import datetime
 from itertools import chain
-from typing import Optional
-import numpy as np
+from operator import itemgetter
+from typing import Literal, Optional
 
+import numpy as np
 import pandas as pd
-from typing import Literal
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -189,6 +189,27 @@ class DataExtractor:
 
     def get_words_from_author(self, author: str) -> int:
         return self.df[self.df["author"] == author]["word_count"].sum()
+
+    def get_used_emojis(self) -> list[str]:
+        all_emojis = self.df['emoji_frequency_mapping'].apply(
+            lambda d: list(d.keys())
+        ).explode()
+        unique = all_emojis.unique()
+        # Filter weird NaN
+        return [i for i in unique if pd.notna(i)]
+
+    def get_emoji_count_for(self, emoji: str) -> int:
+        frequencies = self.df['emoji_frequency_mapping'].apply(
+            lambda d: d.items()
+        ).explode()
+        return frequencies[
+            frequencies.apply(  # instancecheck for nan
+                lambda item: not isinstance(item, float) and emoji == item[0]
+            )
+        ].apply(itemgetter(1)).sum()
+
+    def get_total_emoji_count(self) -> int:
+        return self.df["emoji_count"].sum()
 
 
 class DataVisualizer:
@@ -393,4 +414,27 @@ class DataVisualizer:
                     ("Nachrichten" if criterion == "messages" else "Wort") +
                     "anteil in %"
                 )
+        return fig
+
+    def emojis_pie_top_n(self, n: int = 10, radius: float = 1) -> Figure:
+        """
+        <plot>
+        Creates a pie chart showing the usage percentage of emojis found in the
+        dataset.
+
+        :param radius: The pie radius, defaults to 1
+        :type radius: float, optional
+        :return: The generated pie chart.
+        :rtype: Figure
+        """
+        emojis = self.data_extractor.get_used_emojis()[:n]
+        percents = []
+        total_emojis = self.data_extractor.get_total_emoji_count()
+        for emoji in emojis:
+            percents.append(
+                total_emojis / self.data_extractor.get_emoji_count_for(emoji)
+            )
+        fig, ax = plt.subplots()
+        fig.suptitle(f"Prozentuale Verwendung der Top {n} Emojis")
+        ax.pie(percents, labels=emojis, autopct='%1.1f%%', radius=radius)
         return fig

@@ -352,6 +352,8 @@ def clean_noisy_tags(message: bs4.element.Tag) -> None:
     Args:
         message (bs4.element.Tag): The message's element tag object.
     """
+    # ## Use data-shortname instead of alt, as unicode emojis will have their
+    # ## actual symbol in alt, while having the description in data-shortname.
     # Turn emojis into their alt
     for emoji in message.find_all("img", class_="smilie"):
         try:
