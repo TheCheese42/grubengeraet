@@ -71,6 +71,16 @@ if __name__ == "__main__":
         dest="threaded",
     )
     parser.add_argument(
+        "-cs",
+        "--chunk-size",
+        action="store",
+        default=20,
+        type=int,
+        required=False,
+        help="Chunk Größe für parallele Downloads. 0 für so viele Chunks wie Seiten.",
+        dest="chunk_size",
+    )
+    parser.add_argument(
         "-s",
         "--silent",
         action="store_true",
@@ -111,7 +121,7 @@ if __name__ == "__main__":
 
     try:
         if args.threaded:
-            print("Paralleles Laden: Aktiviert.")
+            print(f"Paralleles Laden: Aktiviert (Chunk size: {args.chunk_size})")
             if args.new_pages_only:
                 print("Nur neue Seiten: Aktiviert.")
                 miner.fetch_new_pages(  # type: ignore
@@ -119,7 +129,9 @@ if __name__ == "__main__":
                 )
             else:
                 miner.fetch_and_save_all_pages_concurrently(
-                    base_url=args.url, working_dir=args.path
+                    base_url=args.url,
+                    working_dir=args.path,
+                    chunk_size=args.chunk_size,
                 )
         else:
             print("Paralleles Laden: Deaktiviert.")
