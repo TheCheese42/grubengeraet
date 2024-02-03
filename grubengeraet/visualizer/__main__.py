@@ -143,6 +143,12 @@ if __name__ == "__main__":
     visualizer = visualizer.DataVisualizer(
         data_extractor=visualizer.DataExtractor(df)
     )
+    try:
+        method = getattr(visualizer, args.format)
+    except AttributeError:
+        print("Invalid visualization method. Use --help to get a list of "
+              "valid methods.")
+        sys.exit(1)
     parameters: dict[str, Any] = {}
     if args.format_options:
         options = args.format_options.split(";")
@@ -156,6 +162,7 @@ if __name__ == "__main__":
             elif option[1].replace(".", "", 1).isdigit():
                 option[1] = float(option[1])
             parameters[option[0]] = option[1]
+
     visualization = method(**parameters)
     if method.__doc__.strip().startswith("<printable>"):
         if args.output:
