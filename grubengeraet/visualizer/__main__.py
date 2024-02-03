@@ -121,13 +121,6 @@ if __name__ == "__main__":
         range_arg["postrange"] = parse_range(args.postrange)
 
     try:
-        method = getattr(visualizer, args.format)
-    except AttributeError:
-        print("Invalid visualization method. Use --help to get a list of "
-              "valid methods.")
-        sys.exit(1)
-
-    try:
         df = pandas.read_json(args.path)
     except FileNotFoundError:
         print(f"The file {args.path} does not exist.")
