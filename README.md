@@ -27,11 +27,10 @@ python -m pip install -r requirements.txt
 
 ### Miner
 
-> **Achtung:**
-> Benutzt man die --threaded flag werden *alle* Seiten gleichzeitig heruntergeladen. Bei sehr großen Threads (wie dem im Beispiel) kann das die CPU für einige Minuten voll auslasten.
-
 Zuerst müssen die HTML Seiten heruntergeladen werden.
 Für alle Optionen siehe `python -m grubengeraet.miner -h`.
+
+Die Standartgröße der Chunks beim parallelen Download beträgt 20. Wird sie auf 0 gesetzt (`--chunk-size 0`) werden **alle** Seiten gleichzeitig geladen.
 
 Beispiel:
 
