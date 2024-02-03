@@ -13,6 +13,11 @@ def set_verbose(value: bool = True):
     VERBOSE = value
 
 
+def chunks(xs: Iterable, n: int):
+    n = max(1, n)
+    return (xs[i:i+n] for i in range(0, len(xs), n))
+
+
 def fetch_new_pages(
     base_url: str, working_dir: Path | str = Path.cwd(), threaded: bool = True
 ) -> None:
@@ -45,7 +50,9 @@ def fetch_new_pages(
 
 
 def fetch_and_save_all_pages_concurrently(
-    base_url: str, working_dir: Path | str = Path.cwd()
+    base_url: str,
+    working_dir: Path | str = Path.cwd(),
+    chunk_size: int = 20,
 ) -> None:
     """Fetches and saves all pages of a thread concurrently.
 
@@ -56,11 +63,20 @@ def fetch_and_save_all_pages_concurrently(
     """
     last_page = get_last_page(base_url)
 
-    fetch_and_save_pages_concurrently(
-        base_url=base_url,
-        pages=range(1, last_page + 1),
-        working_dir=working_dir,
-    )
+    if chunk_size == 0:
+        fetch_and_save_pages_concurrently(
+            base_url=base_url,
+            pages=range(1, last_page + 1),
+            working_dir=working_dir,
+        )
+    else:
+        chunk_list = list(chunks(range(1, last_page + 1), chunk_size))
+        for chunk in chunk_list:
+            fetch_and_save_pages_concurrently(
+                base_url=base_url,
+                pages=chunk,
+                working_dir=working_dir,
+            )
 
 
 def fetch_and_save_pages_concurrently(
