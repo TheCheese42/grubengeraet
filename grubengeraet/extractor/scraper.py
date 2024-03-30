@@ -179,7 +179,9 @@ def construct_dataframe(
 
             author = unmodified_message["data-author"]
             author_id = get_author_id(unmodified_message)
-            creation_datetime = get_message_creation_time(unmodified_message)
+            creation_datetime = get_message_creation_time(
+                unmodified_message
+            ).isoformat()
             is_edited = has_edited_message(unmodified_message)
 
             quote_count = get_amount_of_quotes(unmodified_message)

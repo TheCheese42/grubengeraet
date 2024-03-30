@@ -55,8 +55,7 @@ if __name__ == "__main__":
         action="store",
         type=str,
         required=False,
-        help="NICHT IN BENUTZUNG! "
-             "Eine Range von Seiten, die analysiert werden soll. Sie sollte "
+        help="Eine Range von Seiten, die analysiert werden soll. Sie sollte "
              "das Format \"n1,n2,n3\" haben. n2 ist exklusiv, n3 ist "
              "optional. Nur eine *range flag ist erlaubt.",
         dest="pagerange",
@@ -66,8 +65,7 @@ if __name__ == "__main__":
         action="store",
         type=str,
         required=False,
-        help="NICHT IN BENUTZUNG! "
-             "Eine Range von Beiträgen, die analysiert werden soll. Sie "
+        help="Eine Range von Beiträgen, die analysiert werden soll. Sie "
              "sollte das Format \"n1,n2,n3\" haben. n2 ist exklusiv, n3 ist "
              "optional. Nur eine *range flag ist erlaubt.",
         dest="postrange",
