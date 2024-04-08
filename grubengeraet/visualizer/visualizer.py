@@ -211,6 +211,47 @@ class DataExtractor:
     def get_total_emoji_count(self) -> int:
         return self.df["emoji_count"].sum()
 
+    def sum_dict_values(d: dict) -> float:
+        return sum(d.values())
+
+    def merge_dict(d1: dict, d2: dict) -> dict:
+        new = d1.copy()
+        for key in d2:
+            if key in new:
+                new[key] += d2[key]
+            else:
+                new[key] = d2[key]
+        return new
+
+    def get_authors_sorted_by_emojis(self) -> int:
+        authors = self.get_authors()
+        authors_to_emojis = {}
+        for author in authors:
+            authors_to_emojis[author] = self.get_emojis_for_author(author)
+        authors_to_emojis = {
+            k: v for k, v in sorted(
+                authors_to_emojis.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+        }
+        return list(authors_to_emojis.keys())
+
+    def get_emojis_for_author(self, author: str) -> int:
+        messages = self.select_messages_from_author(author)
+        return messages[
+            "emoji_frequency_mapping"
+        ].apply(self.sum_dict_values).sum()
+
+    def get_emoji_distribution_for_author(self, author: str) -> dict[str, int]:
+        messages = self.select_messages_from_author(author)
+        emojis = messages["emoji_frequency_mapping"]
+        merged = {}
+        for dict in emojis:
+            merged = self.merge_dict(merged, dict)
+        print(merged)
+        return merged
+
 
 class DataVisualizer:
     """
@@ -438,3 +479,47 @@ class DataVisualizer:
         fig.suptitle(f"Prozentuale Verwendung der Top {n} Emojis")
         ax.pie(percents, labels=emojis, autopct='%1.1f%%', radius=radius)
         return fig
+
+    def emoji_distribution_top_n(self, n: int = 10) -> Figure:
+        """
+        <plot>
+        Creates a horizontal bar chart of the top n emoji user, breaking
+        down what emojis they used.
+
+        :param n: How many emoji users shall be included in the char, defaults
+        to 10
+        :type n: int, optional
+        :return: The generated barh chart,
+        :rtype: Figure
+        """
+        relevant_authors = self.data_extractor.get_authors_sorted_by_emojis()[
+            :n]
+        relevant_authors_emoji_distribution = {}
+        for author in relevant_authors:
+            relevant_authors_emoji_distribution = (
+                self.data_extractor.merge_dict(
+                    relevant_authors_emoji_distribution,
+                    self.data_extractor.get_emoji_distribution_for_author(
+                        author
+                    )
+                )
+            )
+        weights = {}
+        for emoji in relevant_authors_emoji_distribution.keys():
+            weights[emoji] = np.zeros(len(relevant_authors))
+            for i, author in enumerate(relevant_authors):
+                weights[emoji][i] += (
+                    self.data_extractor.get_emoji_distribution_for_author(
+                        author
+                    )[emoji]
+                )
+        # TODO
+        # for boolean, weight_count in weight_counts.items():
+        #     p = ax.bar(species, weight_count, width, label=boolean, bottom=bottom)  # noqa
+        #     bottom += weight_count
+        #
+        # ax.set_title("Number of penguins with above average body mass")
+        # ax.legend(loc="upper right")
+        #         self.data_extractor.get_emoji_distribution_for_author()
+        fig, ax = plt.subplots()
+        fig.suptitle(f"Emojiverteilung der Top {n} Emojinutzer")
