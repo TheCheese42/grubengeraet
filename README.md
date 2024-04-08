@@ -1,4 +1,5 @@
 # Grubengerät
+
 Web scraper und Statistiker für das UnlimitedWorld.de Forum.
 
 ## Installation
@@ -8,9 +9,9 @@ Linux/MacOS:
 ```sh
 git clone https://github.com/NotYou404/grubengeraet/
 cd grubengeraet
-python -m venv .venv
-src .venv/bin/activate
-python -m pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
 ```
 
 Windows:
@@ -19,7 +20,7 @@ Windows:
 git clone https://github.com/NotYou404/grubengeraet/
 cd grubengeraet
 python -m venv .venv
-.venv/bin/activate.ps1
+.venv/Scripts/activate.ps1
 python -m pip install -r requirements.txt
 ```
 
@@ -46,18 +47,30 @@ python -m grubengeraet.miner --pre-defined wala --threaded
 
 Die Seiten landen standartmäßig im `.html_content` Verzeichnis.
 
+Durch das weglassen der `--threaded` flag werden die Seiten linear, nacheinander heruntergeladen. Dies dauert bei großen Threads aber sehr lange.
+
 ### Extractor
 
-Danach werden die Daten extrahiert und in eine CSV Datei gepackt.
+Danach werden die Daten extrahiert und in einer JSON Datei gespeichert.
 Für alle Optionen siehe `python -m grubengeraet.extractor -h`.
 
 Beispiel:
 
 ```sh
-python -m grubengeraet.extractor --output data.csv
+python -m grubengeraet.extractor --output data.json
 ```
 
 Nun sind alle wichtigen Daten in der `data.csv` Datei gesammelt.
+
+Alternativ kann auch nur ein bestimmter Bereich analysiert werden. Dies wird mit den `--pagerange` und `--postrange` Funktionen erreicht. Sie müssen in Anführungszeichen übergeben werden und haben das format `"start,stop,step"`, wobei `stop` exklusiv und `step` optional ist.
+
+Beispiel:
+
+```sh
+python -m grubengeraet.extractor --output data.json --pagerange "100,1001"
+```
+
+Hier werden nur Beiträge, die auf den Seiten 100 bis 1000 liegen berücksichtigt.
 
 ### Visualizer
 
@@ -67,13 +80,13 @@ Für alle Optionen siehe `python -m grubengeraet.visualizer -h`.
 Beispiel:
 
 ```sh
-python -m grubengeraet.visualizer --path data.csv --output table.txt --format maua1_style_bbtable
+python -m grubengeraet.visualizer --path data.json --output table.txt --format maua1_style_bbtable
 ```
 
 Oder für Plots:
 
 ```sh
-python -m grubengeraet.visualizer --path data.csv --output plot.svg --format some_sample_plot_function
+python -m grubengeraet.visualizer --path data.json --output plot.svg --format some_sample_plot_function
 ```
 
-Das Format des Plots passt sich der angegebenen Dateiendung an. Auch Vektorbasierte Formate wie SVG werden unterstützt.
+Das Format des Plots passt sich der angegebenen Dateiendung an. Auch Vektor-basierte Formate wie SVG werden unterstützt.

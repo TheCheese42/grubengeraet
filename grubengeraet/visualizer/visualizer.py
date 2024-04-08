@@ -211,9 +211,11 @@ class DataExtractor:
     def get_total_emoji_count(self) -> int:
         return self.df["emoji_count"].sum()
 
+    @staticmethod
     def sum_dict_values(d: dict) -> float:
         return sum(d.values())
 
+    @staticmethod
     def merge_dict(d1: dict, d2: dict) -> dict:
         new = d1.copy()
         for key in d2:
@@ -249,7 +251,6 @@ class DataExtractor:
         merged = {}
         for dict in emojis:
             merged = self.merge_dict(merged, dict)
-        print(merged)
         return merged
 
 
@@ -473,14 +474,17 @@ class DataVisualizer:
         total_emojis = self.data_extractor.get_total_emoji_count()
         for emoji in emojis:
             percents.append(
-                total_emojis / self.data_extractor.get_emoji_count_for(emoji)
+                self.data_extractor.get_emoji_count_for(emoji) / total_emojis
             )
         fig, ax = plt.subplots()
         fig.suptitle(f"Prozentuale Verwendung der Top {n} Emojis")
         ax.pie(percents, labels=emojis, autopct='%1.1f%%', radius=radius)
         return fig
 
-    def emoji_distribution_top_n(self, n: int = 10) -> Figure:
+    def emoji_distribution_top_n(
+        self, n: int = 10,
+        n_emojis: int = 10,
+    ) -> Figure:
         """
         <plot>
         Creates a horizontal bar chart of the top n emoji user, breaking
@@ -489,6 +493,9 @@ class DataVisualizer:
         :param n: How many emoji users shall be included in the char, defaults
         to 10
         :type n: int, optional
+        :param n_emojis: How many different emojis should be shown, rest goes
+        into others. 0 to include all emojis, defaults to 10
+        :type n_emojis: int, optional
         :return: The generated barh chart,
         :rtype: Figure
         """
@@ -504,22 +511,58 @@ class DataVisualizer:
                     )
                 )
             )
+        relevant_authors_emoji_distribution = {k: v for k, v in sorted(
+            relevant_authors_emoji_distribution.items(),
+            key=lambda x: x[1],
+            reverse=True,
+        )}
+
+        if n_emojis:
+            relevant_authors_emoji_distribution = {
+                k: v for k, v in list(
+                    relevant_authors_emoji_distribution.items()
+                )[:n_emojis]
+            }
+
         weights = {}
         for emoji in relevant_authors_emoji_distribution.keys():
             weights[emoji] = np.zeros(len(relevant_authors))
             for i, author in enumerate(relevant_authors):
-                weights[emoji][i] += (
-                    self.data_extractor.get_emoji_distribution_for_author(
-                        author
-                    )[emoji]
-                )
-        # TODO
-        # for boolean, weight_count in weight_counts.items():
-        #     p = ax.bar(species, weight_count, width, label=boolean, bottom=bottom)  # noqa
-        #     bottom += weight_count
-        #
-        # ax.set_title("Number of penguins with above average body mass")
-        # ax.legend(loc="upper right")
-        #         self.data_extractor.get_emoji_distribution_for_author()
+                try:
+                    weights[emoji][i] += (
+                        self.data_extractor.get_emoji_distribution_for_author(
+                            author
+                        )[emoji]
+                    )
+                except KeyError:  # Author hasn't used this emoji
+                    pass
+
+        weights["Andere"] = np.zeros(len(relevant_authors))
+        for i, author in enumerate(relevant_authors):
+            weights["Andere"] += sum(list(
+                self.data_extractor.get_emoji_distribution_for_author(
+                    author
+                ).values()
+            )[n_emojis-1:])
+
+        bottom = np.zeros(len(relevant_authors))
         fig, ax = plt.subplots()
+        for emoji, weight_count in weights.items():
+            ax.bar(
+                relevant_authors,
+                weight_count,
+                0.5,
+                label=emoji,
+                bottom=bottom,
+            )
+            bottom += weight_count
+
+        if n_emojis:
+            legend_cols = (n_emojis + 1) // 4
+        else:
+            legend_cols = len(relevant_authors_emoji_distribution) // 4
+        ax.legend(loc="upper right", ncol=legend_cols)
         fig.suptitle(f"Emojiverteilung der Top {n} Emojinutzer")
+        fig.set_size_inches(
+            1.3 * len(relevant_authors), fig.get_size_inches()[1] * 1.5
+        )
