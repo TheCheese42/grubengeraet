@@ -600,11 +600,11 @@ class DataVisualizer:
         """
         ids = self.data_extractor.get_ids_sorted_by_mentioned()[:n]
         mentions = [self.data_extractor.get_times_mentioned(id) for id in ids]
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(layout="constrained")
         y_pos = np.arange(len(ids))
         ax.barh(y_pos, mentions, 0.8, align="edge")
         ax.set_yticks(
-            y_pos,
+            [i + 0.4 for i in y_pos],
             labels=[self.data_extractor.lookup_id(id) or id for id in ids]
         )
         ax.set_xlabel("Angepingt")
