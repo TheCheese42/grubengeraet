@@ -245,7 +245,6 @@ def construct_dataframe(
     if pagerange:
         index = range(
             get_first_post_from_page(pagerange[0]),
-            # +1 due to the range stop value being exclusive
             get_last_post_from_page(pagerange[-1]) + 1,
         )
     elif postrange:
@@ -275,19 +274,19 @@ def get_post_num(message: bs4.element.Tag) -> int:
     return int(postnum_str.replace(".", ""))
 
 
-def get_post_id(message: bs4.element.Tag) -> int:
+def get_post_id(message: bs4.element.Tag) -> str:
     """
     Get the post id of a message.
 
     :param message: The message's element tag object.
     :type message: bs4.element.Tag
     :return: The post id.
-    :rtype: int
+    :rtype: str
     """
     match = re.search(r"post-(\d+)", message["data-content"])  # type: re.Match
     if not match:
         raise ValueError("Post does not have an ID.")
-    return int(match.group(1))
+    return match.group(1)
 
 
 def get_author_id(message: bs4.element.Tag) -> str:
@@ -304,12 +303,12 @@ def get_author_id(message: bs4.element.Tag) -> str:
         return message.find("a", class_="username")["data-user-id"]
     except TypeError:
         # Deleted Member has no ID
-        return 0
+        return "0"
     except KeyError:
         # First, a non-existent user that doesn't have the anchor tag at all
         # Second, that user pinged someone, that ping anchor is corrupt.
         # Corrupted Tag that doesn't have the data-user-id param. Ex.: https://uwmc.de/p102857  # noqa
-        return 0
+        return "0"
 
 
 def get_amount_of_likes(message: bs4.element.Tag) -> int:
@@ -447,7 +446,7 @@ def get_list_of_mentioned_ids(message: bs4.element.Tag) -> list[str]:
             ids.append(mention["data-user-id"])
         except KeyError:
             # Corrupt Mention Tag (ex.: https://uwmc.de/p90996)
-            ids.append(0)
+            ids.append("0")
     return ids
 
 

@@ -1,4 +1,5 @@
 import math
+from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime
 from itertools import chain
@@ -51,6 +52,9 @@ class DataExtractor:
             selected = df
         self.df = selected
 
+        self.df["author_id"] = self.df["author_id"].astype(str)
+        self.df["creation_datetime"] = self.df["creation_datetime"].astype(str)
+
     @contextmanager
     def change_df(self, df: pd.DataFrame):
         """
@@ -96,11 +100,12 @@ class DataExtractor:
         :return: The username
         :rtype: str
         """
-        if id == 0:
+        if id == "0":
             return None
-        if id not in self.df["author_id"]:
+        author_cols = self.df[self.df["author_id"] == id]
+        if author_cols.empty:
             return None
-        return self.df[self.df["author_id"] == id].iloc[0]["author"]
+        return author_cols.iloc[0]["author"]
 
     def get_authors(self) -> list[str]:
         """Get a list of all authors.
@@ -252,6 +257,22 @@ class DataExtractor:
         for dict in emojis:
             merged = self.merge_dict(merged, dict)
         return merged
+
+    def get_times_mentioned(self, id: str) -> int:
+        ids = [id for sublist in self.df['mentioned_list'] for id in sublist]
+        return Counter(ids)[id]
+
+    def get_ids_sorted_by_mentioned(self) -> list[str]:
+        ids = [id for sublist in self.df['mentioned_list'] for id in sublist]
+        ids_to_mentioned = dict(Counter(ids))
+        ids_to_mentioned = {
+            k: v for k, v in sorted(
+                ids_to_mentioned.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            ) if k != "0"  # Filter unknown and deleted
+        }
+        return list(ids_to_mentioned.keys())
 
 
 class DataVisualizer:
@@ -566,3 +587,25 @@ class DataVisualizer:
         fig.set_size_inches(
             1.3 * len(relevant_authors), fig.get_size_inches()[1] * 1.5
         )
+
+    def top_n_mentioned_barh(self, n: int = 10) -> Figure:
+        """
+        <plot>
+        Create a horizontal bar chart with the top n most mentioned people.
+
+        :param n: Amount of people to show, defaults to 10
+        :type n: int, optional
+        :return: The horizontal bar chart
+        :rtype: Figure
+        """
+        ids = self.data_extractor.get_ids_sorted_by_mentioned()[:n]
+        mentions = [self.data_extractor.get_times_mentioned(id) for id in ids]
+        fig, ax = plt.subplots()
+        y_pos = np.arange(len(ids))
+        ax.barh(y_pos, mentions, 0.8, align="edge")
+        ax.set_yticks(
+            y_pos,
+            labels=[self.data_extractor.lookup_id(id) or id for id in ids]
+        )
+        ax.set_xlabel("Angepingt")
+        fig.suptitle(f"Most Fame/Der Genervteste\nTop {n} am meisten gepingt")
