@@ -274,6 +274,26 @@ class DataExtractor:
         }
         return list(ids_to_mentioned.keys())
 
+    def get_authors_sorted_by_mentions(self) -> list[str]:
+        authors = self.df.apply(
+            lambda x: x["author"] if x["mentioned_list"] else None, axis=1
+        )
+        authors_to_mentioned = dict(Counter(authors))
+        authors_to_mentioned = {
+            k: v for k, v in sorted(
+                authors_to_mentioned.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            ) if k != "0" and k  # Filter unknown and deleted and None
+        }
+        return list(authors_to_mentioned.keys())
+
+    def get_amount_of_mentions(self, author: str) -> int:
+        authors = self.df.apply(
+            lambda x: x["author"] if x["mentioned_list"] else None, axis=1
+        )
+        return Counter(authors)[author]
+
 
 class DataVisualizer:
     """
@@ -498,7 +518,10 @@ class DataVisualizer:
                 self.data_extractor.get_emoji_count_for(emoji) / total_emojis
             )
         fig, ax = plt.subplots()
-        fig.suptitle(f"Prozentuale Verwendung der Top {n} Emojis")
+        fig.suptitle(
+            f"Prozentuale Verwendung der Top {n} Emojis\nGesamt: "
+            f"{total_emojis}"
+        )
         ax.pie(percents, labels=emojis, autopct='%1.1f%%', radius=radius)
         return fig
 
@@ -609,3 +632,28 @@ class DataVisualizer:
         )
         ax.set_xlabel("Angepingt")
         fig.suptitle(f"Most Fame/Der Genervteste\nTop {n} am meisten gepingt")
+
+    def top_n_mentions_barh(self, n: int = 10) -> Figure:
+        """
+        <plot>
+        Create a horizontal bar chart with the top n people with the most
+        mentions.
+
+        :param n: Amount of people to show, defaults to 10
+        :type n: int, optional
+        :return: The horizontal bar chart
+        :rtype: Figure
+        """
+        authors = self.data_extractor.get_authors_sorted_by_mentions()[:n]
+        mentions = [
+            self.data_extractor.get_amount_of_mentions(id) for id in authors
+        ]
+        fig, ax = plt.subplots(layout="constrained")
+        y_pos = np.arange(len(authors))
+        ax.barh(y_pos, mentions, 0.8, align="edge")
+        ax.set_yticks(
+            [i + 0.4 for i in y_pos],
+            labels=authors,
+        )
+        ax.set_xlabel("Pings")
+        fig.suptitle(f"Der Nervigste\nTop {n} meiste Pings")

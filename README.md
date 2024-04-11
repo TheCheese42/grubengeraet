@@ -86,7 +86,75 @@ python -m grubengeraet.visualizer --path data.json --output table.txt --format m
 Oder für Plots:
 
 ```sh
-python -m grubengeraet.visualizer --path data.json --output plot.svg --format some_sample_plot_function
+python -m grubengeraet.visualizer --path data.json --output plot.svg --format top_n_pie
 ```
 
 Das Format des Plots passt sich der angegebenen Dateiendung an. Auch Vektor-basierte Formate wie SVG werden unterstützt.
+
+## Visualizer Docs
+
+Die Visualisierungsfunktion wird mit `--format` angegeben. Dazu gibt es jeweils noch Optionen, die mit `--format-options` (`-fo`) angegeben werden können, im Format `"arg1:value1;arg2:value2;arg3:value3"`.
+
+Beispiel:
+
+```sh
+python -m grubengeraet.visualizer --path data.json --output plot.svg --format top_n_pie --format-options "n:20;criterion:words"
+```
+
+Hier werden die ersten 20 (`n:20`) Autoren mit den meisten geschriebenen Wörtern (`criterion:words`) in einem Kuchendiagramm dargestellt.
+
+### Text-basiert
+
+#### maua1_style_bbtable
+
+Gibt eine BBCode Tabelle aus, die alle Autoren mit der Anzahl Beiträgen, Regelbrüchen, sowie Prozentsatz der ungültigen Beiträge enthält.
+
+Keine Optionen.
+
+#### rule_violation_bbtable_np
+
+Gibt eine BBCode Tabelle aus, die alle Autoren mit der Anzahl Beiträgen, Regelbrüchen, sowie Prozentsatz der ungültigen Beiträge enthält, sortiert nach dem Prozentsatz der Regelbrüche, aufsteigend.
+
+`n`: Anzahl Nachrichten, die benötigt sind, um in der Tabelle aufzutauchen.
+
+### Grafisch
+
+#### top_n_pie
+
+Ein Kuchendiagramm, dass die Top n Autoren darstellt, entweder anhand von Beiträgen oder Wörtern.
+
+`n`: Anzahl Personen, die dargestellt werden sollen.
+`criterion`: `messages` oder `words`.
+`radius`: Radius des Diagramms.
+
+#### yearly_top_n_barh_percent
+
+Ein horizontales Balkendiagramm pro Jahr, zeigt die Top Autoren in Sachen Beiträge oder Wörter.
+
+`n`: Anzahl Personen, die dargestellt werden sollen.
+`criterion`: `messages`oder `words`.
+
+#### emojis_pie_top_n
+
+Kuchendiagramm, dass die Top n Emojis anhand ihrer Häufigkeit angibt.
+
+`n`: Anzahl gezeigter Emojis.
+
+#### emoji_distribution_top_n
+
+Balkendiagramm mit den Top n Emoji-Autoren, und welche Emojis diese wie oft verwendet haben.
+
+`n`: Anzahl Personen, die dargestellt werden sollen.
+`n_emojis`: Anzahl Emojis, die in der Legende angezeigt werden sollen.
+
+#### top_n_mentioned_barh
+
+Horizontales Balkendiagramm, das die Top n meist gepingten Forennutzer zeigt.
+
+`n`: Anzahl Personen, die dargestellt werden sollen.
+
+#### top_n_mentions_barh
+
+Horizontales Balkendiagramm, das die Top n Autoren mit den meisten Pings zeigt.
+
+`n`: Anzahl Personen, die dargestellt werden sollen.
