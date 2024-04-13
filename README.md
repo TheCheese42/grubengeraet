@@ -117,6 +117,10 @@ Gibt eine BBCode Tabelle aus, die alle Autoren mit der Anzahl Beiträgen, Regelb
 
 `n`: Anzahl Nachrichten, die benötigt sind, um in der Tabelle aufzutauchen.
 
+#### emoji_frequency_bbtable
+
+Gibt eine BBCode Tabelle aus, mit allen auftretenden Emojis sortiert nach Häufigkeit. Beachte, dass viele Forensoftwares nicht alle Unicode Emojis anzeigen können.
+
 ### Grafisch
 
 #### top_n_pie
