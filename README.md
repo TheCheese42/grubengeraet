@@ -158,3 +158,25 @@ Horizontales Balkendiagramm, das die Top n meist gepingten Forennutzer zeigt.
 Horizontales Balkendiagramm, das die Top n Autoren mit den meisten Pings zeigt.
 
 `n`: Anzahl Personen, die dargestellt werden sollen.
+
+#### top_n_quoted_barh
+
+Horizontales Balkendiagramm, das die Top n meist zitierten Forennutzer zeigt.
+
+`n`: Anzahl Personen, die dargestellt werden sollen.
+
+#### top_n_quotes_barh
+
+Horizontales Balkendiagramm, das die Top n Autoren mit den meisten Zitaten zeigt.
+
+`n`: Anzahl Personen, die dargestellt werden sollen.
+
+#### prediction_line
+
+Liniendiagramm, mit dem ein Trend visualisiert wird. Es wird vorhergesagt, wann ein besagtes Ziel erreicht wird, anhand eines gewissen Zeitraums.
+
+`goal`: Das Ziel an Beiträgen (z.B. 25000). (Pflicht)
+`data_period_start`: Der Beginn des Zeitraums. (Pflicht)
+`data_period_end`: Der Beginn des Zeitraums. (Pflicht)
+`data_period_type`: Was die oberen beiden Parameter angeben. Eins von `post`, `page` oder `timestamp`. (Pflicht)
+`description`: Eine Beschreibung, die an den Titel angehängt werden soll (z.B. `(anhand der letzten 30 Tage)`)

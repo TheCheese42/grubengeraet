@@ -6,6 +6,7 @@ from itertools import chain
 from operator import itemgetter
 from typing import Literal, Optional
 
+import matplotlib.axes
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -85,10 +86,22 @@ class DataExtractor:
         ).year
 
     @property
+    def first_timestamp(self) -> int:
+        return int(datetime.fromisoformat(
+            self.df.head(1).iloc[0]["creation_datetime"]
+        ).timestamp())
+
+    @property
     def last_year(self) -> int:
         return datetime.fromisoformat(
             self.df.tail(1).iloc[0]["creation_datetime"]
         ).year
+
+    @property
+    def last_timestamp(self) -> int:
+        return int(datetime.fromisoformat(
+            self.df.tail(1).iloc[0]["creation_datetime"]
+        ).timestamp())
 
     def lookup_id(self, id: str) -> str:
         """
@@ -117,6 +130,26 @@ class DataExtractor:
 
     def select_messages_from_author(self, author: str) -> pd.DataFrame:
         return self.df[self.df["author"] == author]
+
+    def select_messages_within_time_range(
+        self, start: int, end: int
+    ) -> pd.DataFrame:
+        """
+        Return a dataframe with all entries within a specified time range.
+
+        :param start: Unix timestamp indicating the first entry (inclusive)
+        :type start: int
+        :param end: Unix timestamp indicating the last entry (inclusive)
+        :type end: int
+        :return: Dataframe with the selected posts
+        :rtype: pd.DataFrame
+        """
+        condition = self.df["creation_datetime"].apply(
+            lambda x: start <= datetime.fromisoformat(
+                str(x)
+            ).timestamp() <= end
+        )
+        return self.df[condition]
 
     def get_messages_from_author(self, author: str) -> int:
         """Get the number of messages an author wrote.
@@ -259,11 +292,17 @@ class DataExtractor:
         return merged
 
     def get_times_mentioned(self, id: str) -> int:
-        ids = [id for sublist in self.df['mentioned_list'] for id in sublist]
+        ids = [id for sublist in self.df["mentioned_list"] for id in sublist]
         return Counter(ids)[id]
 
+    def get_times_quoted(self, author: str) -> int:
+        authors = [
+            name for sublist in self.df["quoted_list"] for name in sublist
+        ]
+        return Counter(authors)[author]
+
     def get_ids_sorted_by_mentioned(self) -> list[str]:
-        ids = [id for sublist in self.df['mentioned_list'] for id in sublist]
+        ids = [id for sublist in self.df["mentioned_list"] for id in sublist]
         ids_to_mentioned = dict(Counter(ids))
         ids_to_mentioned = {
             k: v for k, v in sorted(
@@ -274,23 +313,57 @@ class DataExtractor:
         }
         return list(ids_to_mentioned.keys())
 
-    def get_authors_sorted_by_mentions(self) -> list[str]:
-        authors = self.df.apply(
-            lambda x: x["author"] if x["mentioned_list"] else None, axis=1
-        )
+    def get_authors_sorted_by_quoted(self) -> list[str]:
+        authors = [
+            name for sublist in self.df["quoted_list"] for name in sublist
+        ]
         authors_to_mentioned = dict(Counter(authors))
         authors_to_mentioned = {
             k: v for k, v in sorted(
                 authors_to_mentioned.items(),
                 key=lambda item: item[1],
                 reverse=True,
-            ) if k != "0" and k  # Filter unknown and deleted and None
+            ) if k != ""  # Filter unknown and deleted
         }
         return list(authors_to_mentioned.keys())
+
+    def get_authors_sorted_by_mentions(self) -> list[str]:
+        authors = self.df.apply(
+            lambda x: x["author"] if x["mentioned_list"] else None, axis=1
+        )
+        authors_to_mentions = dict(Counter(authors))
+        authors_to_mentions = {
+            k: v for k, v in sorted(
+                authors_to_mentions.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            ) if k != "0" and k  # Filter unknown and deleted and None
+        }
+        return list(authors_to_mentions.keys())
+
+    def get_authors_sorted_by_quotes(self) -> list[str]:
+        authors = self.df.apply(
+            lambda x: x["author"] if x["quoted_list"] else None, axis=1
+        )
+        authors_to_quotes = dict(Counter(authors))
+        authors_to_quotes = {
+            k: v for k, v in sorted(
+                authors_to_quotes.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            ) if k != "" and k  # Filter unknown and deleted and None
+        }
+        return list(authors_to_quotes.keys())
 
     def get_amount_of_mentions(self, author: str) -> int:
         authors = self.df.apply(
             lambda x: x["author"] if x["mentioned_list"] else None, axis=1
+        )
+        return Counter(authors)[author]
+
+    def get_amount_of_quotes(self, author: str) -> int:
+        authors = self.df.apply(
+            lambda x: x["author"] if x["quoted_list"] else None, axis=1
         )
         return Counter(authors)[author]
 
@@ -587,7 +660,7 @@ class DataVisualizer:
                 self.data_extractor.get_emoji_distribution_for_author(
                     author
                 ).values()
-            )[n_emojis-1:])
+            )[n_emojis - 1:])
 
         bottom = np.zeros(len(relevant_authors))
         fig, ax = plt.subplots()
@@ -610,6 +683,7 @@ class DataVisualizer:
         fig.set_size_inches(
             1.3 * len(relevant_authors), fig.get_size_inches()[1] * 1.5
         )
+        return fig
 
     def top_n_mentioned_barh(self, n: int = 10) -> Figure:
         """
@@ -632,6 +706,7 @@ class DataVisualizer:
         )
         ax.set_xlabel("Angepingt")
         fig.suptitle(f"Most Fame/Der Genervteste\nTop {n} am meisten gepingt")
+        return fig
 
     def top_n_mentions_barh(self, n: int = 10) -> Figure:
         """
@@ -657,3 +732,225 @@ class DataVisualizer:
         )
         ax.set_xlabel("Pings")
         fig.suptitle(f"Der Nervigste\nTop {n} meiste Pings")
+        return fig
+
+    def top_n_quoted_barh(self, n: int = 10) -> Figure:
+        """
+        <plot>
+        Create a horizontal car chart with the top n most quoted people.
+
+        :param n: Amount of people to show, defaults to 10
+        :type n: int, optional
+        :return: The horizontal bar chart
+        :rtype: Figure
+        """
+        authors = self.data_extractor.get_authors_sorted_by_quoted()[:n]
+        quotes = [
+            self.data_extractor.get_times_quoted(author) for author in authors
+        ]
+        fig, ax = plt.subplots(layout="constrained")
+        y_pos = np.arange(len(authors))
+        ax.barh(y_pos, quotes, 0.8, align="edge")
+        ax.set_yticks(
+            [i + 0.4 for i in y_pos],
+            labels=authors,
+        )
+        ax.set_xlabel("Zitiert")
+        fig.suptitle(f"Der Weiseste\nTop {n} am öftesten zitiert")
+        return fig
+
+    def top_n_quotes_barh(self, n: int = 10) -> Figure:
+        """
+        <plot>
+        Create a horizontal bar chart with the top n people with the most
+        quotes.
+
+        :param n: Amount of people to show, defaults to 10
+        :type n: int, optional
+        :return: The horizontal bar chart
+        :rtype: Figure
+        """
+        authors = self.data_extractor.get_authors_sorted_by_quotes()[:n]
+        quotes = [
+            self.data_extractor.get_amount_of_quotes(
+                author
+            ) for author in authors
+        ]
+        fig, ax = plt.subplots(layout="constrained")
+        y_pos = np.arange(len(authors))
+        ax.barh(y_pos, quotes, 0.8, align="edge")
+        ax.set_yticks(
+            [i + 0.4 for i in y_pos],
+            labels=authors,
+        )
+        ax.set_xlabel("Zitate")
+        fig.suptitle(f"Top {n} meiste Zitate")
+        return fig
+
+    def prediction_line(
+        self,
+        goal: int,
+        data_period_start: int,
+        data_period_end: int,
+        data_period_type: Literal["post", "page", "timestamp"],
+        description: str = "",
+    ) -> Figure:
+        """
+        <plot>
+        Create a line chart predicting when a certain goal will be reached,
+        date wise. Everything is one-indexed, not zero-indexed.
+
+        :param goal: The amount of posts to fullfil the goal
+        :type goal: int
+        :param data_period_start: Beginning of the data that should be included
+        for the prediction (inclusive)
+        :type data_period_start: int
+        :param data_period_end: End of the data that should be included for the
+        prediction (inclusive)
+        :type data_period_end: int
+        :param data_period_type: Wether the period should be seen in posts, in
+        pages or as timestamps.
+        :type data_period_type: Literal["post", "page", "timestamp"]
+        :param description: Something to add after figure title. Example:
+        `"anhand der letzten 30 Tage"` makes the title `"Prognose: {goal}
+        anhand der letzten 30 Tage"`
+        :return: The line chart
+        :rtype: Figure
+        """
+        if description and not description.startswith(" "):
+            description = f" {description}"
+
+        if not isinstance(
+            data_period_start, int
+        ) or not isinstance(
+            data_period_end, int
+        ):
+            raise TypeError(
+                "data_period_* parameters need to be a valid integer"
+            )
+
+        if data_period_type not in ("post", "page", "timestamp"):
+            raise ValueError(
+                "data_period_type has to be one of 'post', 'page' or "
+                "'timestamp'"
+            )
+
+        if goal <= self.data_extractor.messages:
+            raise ValueError(f"The goal of {goal} is already reached.")
+
+        if data_period_type == "post":
+            if data_period_start < 1:
+                raise ValueError("data_period_start must be at least 1")
+            elif data_period_start >= self.data_extractor.messages:
+                raise ValueError(
+                    "data_period_start must be less than the total number of "
+                    "posts"
+                )
+            elif data_period_end < 2:
+                raise ValueError("data_period_end must be at least 2")
+            elif data_period_end > self.data_extractor.messages:
+                raise ValueError(
+                    "data_period_end may not exceed the total number of posts"
+                )
+        elif data_period_type == "pages":
+            if data_period_start < 1:
+                raise ValueError("data_period_start must be at least 1")
+            elif data_period_start >= math.ceil(
+                self.data_extractor.messages / 20
+            ):
+                raise ValueError(
+                    "data_period_start must be less than the total number of "
+                    "pages"
+                )
+            elif data_period_end < 2:
+                raise ValueError("data_period_end must be at least 2")
+            elif data_period_end > math.ceil(
+                self.data_extractor.messages / 20
+            ):
+                raise ValueError(
+                    "data_period_end may not exceed the total number of pages"
+                )
+        elif data_period_type == "timestamp":
+            if data_period_start < self.data_extractor.first_timestamp:
+                data_period_start = self.data_extractor.first_timestamp
+            if data_period_start > self.data_extractor.last_timestamp:
+                raise ValueError("data_period_start is too late")
+            if data_period_end < self.data_extractor.first_timestamp:
+                raise ValueError("data_period_end is too early")
+            if data_period_end > self.data_extractor.last_timestamp:
+                data_period_end = self.data_extractor.last_timestamp
+
+        if data_period_start > data_period_end:
+            raise ValueError(
+                "data_period_start must be <= than data_period_end"
+            )
+
+        if data_period_type == "post":
+            # + 1 because both are inclusive
+            posts_in_period = data_period_end - data_period_start + 1
+            start_dt = datetime.fromisoformat(self.data_extractor.df.iloc[
+                data_period_start - 1
+            ]["creation_datetime"])
+            end_dt = datetime.fromisoformat(self.data_extractor.df.iloc[
+                data_period_end - 1
+            ]["creation_datetime"])
+        elif data_period_type == "page":
+            posts_in_period = (data_period_end - data_period_start + 1) * 20
+            # Remove missing posts from last page
+            posts_in_period -= 20 - self.data_extractor.messages % 20
+            start_dt = datetime.fromisoformat(self.data_extractor.df.iloc[
+                # No +1 because page starts at 1, 21, 41 etc.
+                data_period_start / 20
+            ]["creation_datetime"])
+            end_dt = datetime.fromisoformat(self.data_extractor.df.iloc[
+                data_period_end / 20 + 20
+            ]["creation_datetime"])
+        elif data_period_type == "timestamp":
+            posts_in_period = len(
+                sel := self.data_extractor.select_messages_within_time_range(
+                    data_period_start, data_period_end
+                )
+            )
+            start_dt = datetime.fromisoformat(sel.iloc[0]["creation_datetime"])
+            end_dt = datetime.fromisoformat(sel.iloc[-1]["creation_datetime"])
+
+        # Calculating from total seconds because timedelta.days doesn't provide
+        # fractions of the last day
+        seconds = int((end_dt - start_dt).total_seconds())
+        posts_per_second = posts_in_period / seconds
+        posts_per_day = posts_per_second * 60 * 60 * 24
+
+        required_posts_to_goal = goal - self.data_extractor.messages
+        required_days = required_posts_to_goal / posts_per_day
+
+        posts_per_day_in_period = []
+        with self.data_extractor.change_df(
+            self.data_extractor.select_messages_within_time_range(
+                start_dt.timestamp(), end_dt.timestamp()
+            )
+        ):
+            cur_dt = start_dt.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            while cur_dt.timestamp() < end_dt.timestamp():
+                posts_per_day_in_period.append(len(
+                    self.data_extractor.select_messages_within_time_range(
+                        cur_dt.timestamp(), cur_dt.timestamp() + 60 * 60 * 24
+                    )
+                ))
+                cur_dt = datetime.fromtimestamp(
+                    cur_dt.timestamp() + 60 * 60 * 24
+                )
+
+        posts_per_day_in_period.extend(
+            [posts_per_day] * math.ceil(required_days)
+        )
+
+        fig, ax = plt.subplots(layout="constrained")
+        ax.plot(posts_per_day_in_period)
+        ax.set_ylabel("Nachrichten am Tag")
+        fig.suptitle(
+            f"Prognose: {goal}" + description +
+            f"\nVoraussichtlich noch etwa {required_days} Tage"
+        )
+        return fig
