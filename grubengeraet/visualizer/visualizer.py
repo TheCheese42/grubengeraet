@@ -6,7 +6,7 @@ from itertools import chain
 from operator import itemgetter
 from typing import Literal, Optional
 
-import matplotlib.axes
+import emoji
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -236,6 +236,20 @@ class DataExtractor:
         # Filter weird NaN
         return [i for i in unique if pd.notna(i)]
 
+    def get_emojis_sorted_by_frequency(self) -> list[str]:
+        emojis = self.get_used_emojis()
+        emojis_to_frequency = {}
+        for emoji in emojis:
+            emojis_to_frequency[emoji] = self.get_emoji_count_for(emoji)
+        emojis_to_frequency = {
+            k: v for k, v in sorted(
+                emojis_to_frequency.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+        }
+        return list(emojis_to_frequency.keys())
+
     def get_emoji_count_for(self, emoji: str) -> int:
         frequencies = self.df['emoji_frequency_mapping'].apply(
             lambda d: d.items()
@@ -450,6 +464,30 @@ class DataVisualizer:
                 [TD]{messages}[/TD]\
                 [TD]{rules_violating_messages}[/TD]\
                 [TD]{percentage_rules_violating_messages * 100}%[/TD][/TR]"
+        table += "[/TABLE]"
+        table = table.replace("  ", "")
+        table = table.strip()
+        return table
+
+    def emoji_frequency_bbtable(self) -> str:
+        """
+        <printable>
+        Construct a BBCode table showing all emojis together with their
+        total usage count, sorted by usage.
+
+        :returns: The BBCode table
+        :rtype: str
+        """
+        table = "\
+            [TABLE=full][TR][TD]Emoji[/TD][TD]Anzahl[/TD][/TR]"
+        emojis_sorted = (
+            self.data_extractor.get_emojis_sorted_by_frequency()
+        )
+        for emoji_ in emojis_sorted:
+            amount  = self.data_extractor.get_emoji_count_for(emoji_)
+            table += f"\
+                [TR][TD]{emoji.emojize(emoji_, language='alias')}[/TD]\
+                [TD]{amount}[/TD][/TR]"
         table += "[/TABLE]"
         table = table.replace("  ", "")
         table = table.strip()
