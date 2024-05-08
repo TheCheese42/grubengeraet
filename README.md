@@ -184,3 +184,7 @@ Liniendiagramm, mit dem ein Trend visualisiert wird. Es wird vorhergesagt, wann 
 `data_period_end`: Der Beginn des Zeitraums. (Pflicht)
 `data_period_type`: Was die oberen beiden Parameter angeben. Eins von `post`, `page` oder `timestamp`. (Pflicht)
 `description`: Eine Beschreibung, die an den Titel angehängt werden soll (z.B. `(anhand der letzten 30 Tage)`)
+
+#### authors_per_year_bar
+
+Vertikales Balkendiagramm, dass die Anzahl verschiedener Teilnehmer eines Threads pro Jahr darstellt.

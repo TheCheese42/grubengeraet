@@ -103,6 +103,10 @@ class DataExtractor:
             self.df.tail(1).iloc[0]["creation_datetime"]
         ).timestamp())
 
+    @property
+    def authors(self) -> int:
+        return len(self.df["author"].unique())
+
     def lookup_id(self, id: str) -> str:
         """
         Lookup a user's name by their id. If None, the user never wrote
@@ -680,14 +684,14 @@ class DataVisualizer:
             }
 
         weights = {}
-        for emoji in relevant_authors_emoji_distribution.keys():
-            weights[emoji] = np.zeros(len(relevant_authors))
+        for emoji_ in relevant_authors_emoji_distribution.keys():
+            weights[emoji_] = np.zeros(len(relevant_authors))
             for i, author in enumerate(relevant_authors):
                 try:
-                    weights[emoji][i] += (
+                    weights[emoji_][i] += (
                         self.data_extractor.get_emoji_distribution_for_author(
                             author
-                        )[emoji]
+                        )[emoji_]
                     )
                 except KeyError:  # Author hasn't used this emoji
                     pass
@@ -702,12 +706,12 @@ class DataVisualizer:
 
         bottom = np.zeros(len(relevant_authors))
         fig, ax = plt.subplots()
-        for emoji, weight_count in weights.items():
+        for emoji_, weight_count in weights.items():
             ax.bar(
                 relevant_authors,
                 weight_count,
                 0.5,
-                label=emoji,
+                label=emoji_,
                 bottom=bottom,
             )
             bottom += weight_count
@@ -984,11 +988,64 @@ class DataVisualizer:
             [posts_per_day] * math.ceil(required_days)
         )
 
-        fig, ax = plt.subplots(layout="constrained")
+        fmt = "%d.%m.%Y"
+        xticks_labels: list[str] = []
+        cur_dt = start_dt
+        while cur_dt.timestamp() <= end_dt.timestamp():
+            xticks_labels.append(cur_dt.strftime(fmt))
+            cur_dt = datetime.fromtimestamp(cur_dt.timestamp() + 60 * 60 * 24)
+
+        xticks = list(range(len(xticks_labels)))
+        while len(xticks) > 14:
+            xticks = [e for i, e in enumerate(xticks) if i % 2 == 0]
+        xticks.append(len(xticks_labels) + int(required_days) + 1)
+        while len(xticks_labels) > 14:
+            xticks_labels = [
+                e for i, e in enumerate(xticks_labels) if i % 2 == 0
+            ]
+        xticks_labels.append(
+            datetime.fromtimestamp(
+                end_dt.timestamp() + required_days * 24 * 60 * 60
+            ).strftime(fmt)
+        )
+        print(end_dt, seconds/60/60/24)
+        fig, ax = plt.subplots()
         ax.plot(posts_per_day_in_period)
+        ax.tick_params(axis='x', labelrotation=45)
         ax.set_ylabel("Nachrichten am Tag")
+        ax.set_xticks(xticks, labels=xticks_labels)
         fig.suptitle(
             f"Prognose: {goal}" + description +
-            f"\nVoraussichtlich noch etwa {required_days} Tage"
+            f"\nVoraussichtlich noch etwa {required_days:.2f} Tage"
+        )
+        fig.set_size_inches(
+            fig.get_size_inches()[0] * 2,
+            fig.get_size_inches()[1] + 3,
         )
         return fig
+
+    def authors_per_year_bar(self):
+        """
+        <plot>
+        Create a vertical bar chart showcasing the amount of unique authors
+        writing into the thread on a yearly basis.
+        """
+        authors = []
+        years = list(range(
+            self.data_extractor.first_year,
+            self.data_extractor.last_year + 1,
+        ))
+        for year in years:
+            year_df = self.data_extractor.select_messages_for_year(year)
+            with self.data_extractor.change_df(year_df):
+                authors.append(self.data_extractor.authors)
+
+        fig, ax = plt.subplots()
+        bottom = np.zeros(len(years))
+        ax.bar(
+            years,
+            authors,
+            0.5,
+            # label=emoji,
+            bottom=bottom,
+        )
