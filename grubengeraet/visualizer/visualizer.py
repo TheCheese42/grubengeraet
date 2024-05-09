@@ -80,6 +80,10 @@ class DataExtractor:
         return self.df["word_count"].sum()
 
     @property
+    def words_per_message(self) -> int:
+        return self.words / self.messages
+
+    @property
     def first_year(self) -> int:
         return datetime.fromisoformat(
             self.df.head(1).iloc[0]["creation_datetime"]
@@ -229,8 +233,29 @@ class DataExtractor:
         }
         return list(authors_to_words.keys())
 
+    def get_authors_sorted_by_words_per_message(self) -> list[str]:
+        authors = self.get_authors()
+        authors_to_words_per_message = {}
+        for author in authors:
+            messages = self.get_messages_from_author(author)
+            words = self.get_words_from_author(author)
+            authors_to_words_per_message[author] = words / messages
+        authors_to_words_per_message = {
+            k: v for k, v in sorted(
+                authors_to_words_per_message.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+        }
+        return list(authors_to_words_per_message.keys())
+
     def get_words_from_author(self, author: str) -> int:
         return self.df[self.df["author"] == author]["word_count"].sum()
+
+    def get_words_per_message_for_author(self, author: str) -> int:
+        messages = self.get_messages_from_author(author)
+        words = self.get_words_from_author(author)
+        return words / messages
 
     def get_used_emojis(self) -> list[str]:
         all_emojis = self.df['emoji_frequency_mapping'].apply(
@@ -243,8 +268,8 @@ class DataExtractor:
     def get_emojis_sorted_by_frequency(self) -> list[str]:
         emojis = self.get_used_emojis()
         emojis_to_frequency = {}
-        for emoji in emojis:
-            emojis_to_frequency[emoji] = self.get_emoji_count_for(emoji)
+        for emoji_ in emojis:
+            emojis_to_frequency[emoji_] = self.get_emoji_count_for(emoji_)
         emojis_to_frequency = {
             k: v for k, v in sorted(
                 emojis_to_frequency.items(),
@@ -488,7 +513,7 @@ class DataVisualizer:
             self.data_extractor.get_emojis_sorted_by_frequency()
         )
         for emoji_ in emojis_sorted:
-            amount  = self.data_extractor.get_emoji_count_for(emoji_)
+            amount = self.data_extractor.get_emoji_count_for(emoji_)
             table += f"\
                 [TR][TD]{emoji.emojize(emoji_, language='alias')}[/TD]\
                 [TD]{amount}[/TD][/TR]"
@@ -628,9 +653,9 @@ class DataVisualizer:
         emojis = self.data_extractor.get_used_emojis()[:n]
         percents = []
         total_emojis = self.data_extractor.get_total_emoji_count()
-        for emoji in emojis:
+        for emoji_ in emojis:
             percents.append(
-                self.data_extractor.get_emoji_count_for(emoji) / total_emojis
+                self.data_extractor.get_emoji_count_for(emoji_) / total_emojis
             )
         fig, ax = plt.subplots()
         fig.suptitle(
@@ -819,7 +844,7 @@ class DataVisualizer:
             ) for author in authors
         ]
         fig, ax = plt.subplots(layout="constrained")
-        y_pos = np.arange(len(authors))
+        y_pos = np.arange(len(authors)) 
         ax.barh(y_pos, quotes, 0.8, align="edge")
         ax.set_yticks(
             [i + 0.4 for i in y_pos],
@@ -1041,11 +1066,75 @@ class DataVisualizer:
                 authors.append(self.data_extractor.authors)
 
         fig, ax = plt.subplots()
+        fig.suptitle("Teilnehmer pro Jahr")
         bottom = np.zeros(len(years))
         ax.bar(
             years,
             authors,
             0.5,
-            # label=emoji,
             bottom=bottom,
         )
+        return fig
+
+    def posts_per_author_per_year_bar(self):
+        """
+        <plot>
+        Create a vertical bar chart showcasing the amount of messages per
+        author on average on a yearly basis.
+        """
+        messages_per_author = []
+        years = list(range(
+            self.data_extractor.first_year,
+            self.data_extractor.last_year + 1,
+        ))
+        for year in years:
+            year_df = self.data_extractor.select_messages_for_year(year)
+            with self.data_extractor.change_df(year_df):
+                messages = self.data_extractor.messages
+                authors = self.data_extractor.authors
+                messages_per_author.append(messages / authors)
+
+        fig, ax = plt.subplots()
+        fig.suptitle("Beiträge pro Teilnehmer pro Jahr")
+        bottom = np.zeros(len(years))
+        ax.bar(
+            years,
+            messages_per_author,
+            0.5,
+            bottom=bottom,
+        )
+        return fig
+
+    def top_n_words_per_message_bar(self, n: int = 10):
+        """
+        <plot>
+        Create a vertical bar chart showing the top n authors measured by words
+        per message.
+
+        :param n: How many authors to display, defaults to 10
+        :type n: int, optional
+        """
+        authors = self.data_extractor.get_authors_sorted_by_words_per_message(
+        )[:n]
+        words_per_message = []
+        for author in authors:
+            words_per_message.append(
+                self.data_extractor.get_words_per_message_for_author(author)
+            )
+        authors.insert(0, "Gesamt")
+        words_per_message.insert(0, self.data_extractor.words_per_message)
+
+        fig, ax = plt.subplots(layout="constrained")
+        fig.suptitle(f"Top {n} Spieler nach Anzahl Wörter pro Beitrag")
+        y_pos = np.arange(len(authors))
+        ax.barh(
+            y_pos,
+            words_per_message,
+            0.8,
+            align="edge",
+        )
+        ax.set_yticks(
+            [i + 0.4 for i in y_pos],
+            labels=authors,
+        )
+        return fig
