@@ -42,6 +42,7 @@ COLUMNS = [
     "mentions_count",
     "mentioned_list",
     "word_count",
+    "words",
     "emoji_count",
     "emoji_frequency_mapping",
     "is_edited",
@@ -98,7 +99,7 @@ def find_all_messages(soup: bs4.BeautifulSoup) -> list[bs4.element.Tag]:
     Returns:
         list[bs4.element.Tag]: The list containing the message article tags.
     """
-    return soup.find_all("article", class_="message")
+    return soup.find_all("article", class_="message")  # type: ignore[no-any-return]  # noqa
 
 
 def find_message_content(message: bs4.element.Tag) -> bs4.element.Tag:
@@ -207,6 +208,7 @@ def construct_dataframe(
             content = content_tag.get_text(strip=True)  # needs modified
 
             word_count = get_amount_of_words(content_tag)
+            words = split_words(content_tag)
 
             rules_compliance_check_result = rules_reworked(content, word_count)
             rulebreak_reasons = [
@@ -231,6 +233,7 @@ def construct_dataframe(
                         mentions_count,
                         mentioned_list,
                         word_count,
+                        words,
                         emoji_count,
                         emoji_frequency_mapping,
                         is_edited,
@@ -286,7 +289,7 @@ def get_post_id(message: bs4.element.Tag) -> str:
     match = re.search(r"post-(\d+)", message["data-content"])  # type: re.Match
     if not match:
         raise ValueError("Post does not have an ID.")
-    return match.group(1)
+    return match.group(1)  # type: ignore[no-any-return]
 
 
 def get_author_id(message: bs4.element.Tag) -> str:
@@ -300,7 +303,7 @@ def get_author_id(message: bs4.element.Tag) -> str:
     """
     try:
         # Pings look the same, however the author comes first
-        return message.find("a", class_="username")["data-user-id"]
+        return message.find("a", class_="username")["data-user-id"]  # type: ignore[no-any-return]  # noqa
     except TypeError:
         # Deleted Member has no ID
         return "0"
@@ -459,7 +462,19 @@ def get_amount_of_words(content: bs4.element.Tag) -> int:
     Returns:
         int: The word count.
     """
-    return _count_words(content.get_text(strip=True))
+    return len(_split_words(content.get_text(strip=True)))
+
+
+def split_words(content: bs4.element.Tag) -> list[str]:
+    """Splits a message into individual words.
+
+    Args:
+        content (bs4.element.Tag): The message content's element tag object.
+
+    Returns:
+        int: The word count.
+    """
+    return _split_words(content.get_text(strip=True))
 
 
 def get_mapping_of_emojis_and_frequency(
@@ -483,7 +498,7 @@ def get_mapping_of_emojis_and_frequency(
     return emojis
 
 
-def _count_words(string_: str) -> int:
+def _split_words(string_: str) -> list[str]:
     """Counts the amount of words in a string by utilizing the
     re.split() method. Splits on any whitespace character and
     discards empty strings.
@@ -494,11 +509,9 @@ def _count_words(string_: str) -> int:
     Returns:
         int: The amount of words in the string.
     """
-    # Should split this into 2: `two-worded`
+    # Should split this into 2: `two-worded` or into 3: `not.one"word`
     split = re.split(rf"[\s{PUNCTUATION}]", string_)
-    return len(
-        [i for i in split if re.search(r"\w", i)]
-    )
+    return [i for i in split if re.search(r"\w", i)]
 
 
 def has_edited_message(message: bs4.element.Tag) -> bool:
@@ -513,73 +526,6 @@ def has_edited_message(message: bs4.element.Tag) -> bool:
     if message.find("div", class_="message-lastEdit"):
         return True
     return False
-
-
-def check_rules_compliance(
-    content: str, word_count_: int
-) -> tuple[bool, list[Optional[str]]]:
-    """
-    DEPRECATED - USE rules_reworked()
-    Checks if a post is compliant to the rules.
-
-    Args:
-        content (str): The cleaned up and stripped content string.
-        word_count (int): The word count.
-
-    Returns:
-        tuple[bool, list[Optional[str], ...]]: A tuple with the first
-        element being the check result and the second one being a list
-        with the reasons (str) in case it's not compliant. Reasons can
-        be "word_count", "first_letter" or "punctuation".
-    """
-    raise DeprecationWarning(
-        "check_rules_compliance() is deprecated, please use rules_reworked() "
-        "instead."
-    )
-    # Rules:
-    # - At least 5 words (word_count)
-    # - First letter must be capitalized (first_letter)
-    # - Trailing punctuation (punctuation)
-    compliance = {
-        "word_count": True,
-        "first_letter": True,
-        "punctuation": True,
-    }
-    # This needs to be done better... Needs a more comprehensive database.
-    punctuational_textual_emotes_and_symbols: list[str] = [
-        "-",
-        "xD",
-        "x.x",
-        ":c",
-        "o7",
-        ":3",
-        "q.q",
-        ":0",
-    ]
-
-    if word_count_ < 5:
-        compliance["word_count"] = False
-    try:
-        first_letter_index = _find_first_letter_index(content)
-        if first_letter_index is None:  # No letter in msg
-            compliance["first_letter"] = False
-        elif not content[first_letter_index].isupper():
-            compliance["first_letter"] = False
-        if content[-1] not in string.punctuation:
-            for i in punctuational_textual_emotes_and_symbols:
-                if content.endswith(i):
-                    break
-            else:
-                compliance["punctuation"] = False
-    except IndexError:
-        # Content is empty. Example: https://uwmc.de/p108813
-        compliance["first_letter"] = False
-        compliance["punctuation"] = False
-
-    broken_rules: list[Optional[str]] = [
-        key for key, value in compliance.items() if not value
-    ]
-    return (not any(broken_rules), broken_rules)
 
 
 def get_message_creation_time(message: bs4.element.Tag) -> dt.datetime:

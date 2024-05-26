@@ -1,10 +1,11 @@
 import math
+import string
 from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime
 from itertools import chain
 from operator import itemgetter
-from typing import Literal, Optional
+from typing import Any, Generator, Literal, Optional
 
 import emoji
 import numpy as np
@@ -57,7 +58,7 @@ class DataExtractor:
         self.df["creation_datetime"] = self.df["creation_datetime"].astype(str)
 
     @contextmanager
-    def change_df(self, df: pd.DataFrame):
+    def change_df(self, df: pd.DataFrame) -> Generator[None, None, None]:
         """
         Temporarily switch to a different dataframe.
 
@@ -77,10 +78,10 @@ class DataExtractor:
 
     @property
     def words(self) -> int:
-        return self.df["word_count"].sum()
+        return self.df["word_count"].sum()  # type: ignore
 
     @property
-    def words_per_message(self) -> int:
+    def words_per_message(self) -> float:
         return self.words / self.messages
 
     @property
@@ -111,7 +112,7 @@ class DataExtractor:
     def authors(self) -> int:
         return len(self.df["author"].unique())
 
-    def lookup_id(self, id: str) -> str:
+    def lookup_id(self, id: str) -> Optional[str]:
         """
         Lookup a user's name by their id. If None, the user never wrote
         something in that thread.
@@ -126,7 +127,7 @@ class DataExtractor:
         author_cols = self.df[self.df["author_id"] == id]
         if author_cols.empty:
             return None
-        return author_cols.iloc[0]["author"]
+        return author_cols.iloc[0]["author"]  # type: ignore
 
     def get_authors(self) -> list[str]:
         """Get a list of all authors.
@@ -134,13 +135,13 @@ class DataExtractor:
         Returns:
             list[str]: The list of authors.
         """
-        return self.df["author"].unique().tolist()
+        return self.df["author"].unique().tolist()  # type: ignore
 
     def select_messages_from_author(self, author: str) -> pd.DataFrame:
         return self.df[self.df["author"] == author]
 
     def select_messages_within_time_range(
-        self, start: int, end: int
+        self, start: float, end: float
     ) -> pd.DataFrame:
         """
         Return a dataframe with all entries within a specified time range.
@@ -250,9 +251,9 @@ class DataExtractor:
         return list(authors_to_words_per_message.keys())
 
     def get_words_from_author(self, author: str) -> int:
-        return self.df[self.df["author"] == author]["word_count"].sum()
+        return self.df[self.df["author"] == author]["word_count"].sum()  # type: ignore  # noqa
 
-    def get_words_per_message_for_author(self, author: str) -> int:
+    def get_words_per_message_for_author(self, author: str) -> float:
         messages = self.get_messages_from_author(author)
         words = self.get_words_from_author(author)
         return words / messages
@@ -283,21 +284,21 @@ class DataExtractor:
         frequencies = self.df['emoji_frequency_mapping'].apply(
             lambda d: d.items()
         ).explode()
-        return frequencies[
+        return frequencies[  # type: ignore
             frequencies.apply(  # instancecheck for nan
                 lambda item: not isinstance(item, float) and emoji == item[0]
             )
         ].apply(itemgetter(1)).sum()
 
     def get_total_emoji_count(self) -> int:
-        return self.df["emoji_count"].sum()
+        return self.df["emoji_count"].sum()  # type: ignore
 
     @staticmethod
-    def sum_dict_values(d: dict) -> float:
+    def sum_dict_values(d: dict[Any, float]) -> float:
         return sum(d.values())
 
     @staticmethod
-    def merge_dict(d1: dict, d2: dict) -> dict:
+    def merge_dict(d1: dict[Any, Any], d2: dict[Any, Any]) -> dict[Any, Any]:
         new = d1.copy()
         for key in d2:
             if key in new:
@@ -306,7 +307,7 @@ class DataExtractor:
                 new[key] = d2[key]
         return new
 
-    def get_authors_sorted_by_emojis(self) -> int:
+    def get_authors_sorted_by_emojis(self) -> list[str]:
         authors = self.get_authors()
         authors_to_emojis = {}
         for author in authors:
@@ -322,16 +323,16 @@ class DataExtractor:
 
     def get_emojis_for_author(self, author: str) -> int:
         messages = self.select_messages_from_author(author)
-        return messages[
+        return messages[  # type: ignore
             "emoji_frequency_mapping"
         ].apply(self.sum_dict_values).sum()
 
     def get_emoji_distribution_for_author(self, author: str) -> dict[str, int]:
         messages = self.select_messages_from_author(author)
         emojis = messages["emoji_frequency_mapping"]
-        merged = {}
-        for dict in emojis:
-            merged = self.merge_dict(merged, dict)
+        merged: dict[str, int] = {}
+        for dict_ in emojis:
+            merged = self.merge_dict(merged, dict_)
         return merged
 
     def get_times_mentioned(self, id: str) -> int:
@@ -409,6 +410,21 @@ class DataExtractor:
             lambda x: x["author"] if x["quoted_list"] else None, axis=1
         )
         return Counter(authors)[author]
+
+    def count_characters(self) -> dict[str, int]:
+        exploded = self.df["words"].explode()
+        exploded = exploded[exploded.apply(lambda x: isinstance(x, str))]
+        return dict(Counter("".join(exploded)))
+
+    def count_first_characters(self) -> dict[str, int]:
+        exploded = self.df["words"].explode()
+        exploded = exploded[exploded.apply(lambda x: isinstance(x, str))]
+        return dict(Counter("".join(word[0] for word in exploded)))
+
+    def count_last_characters(self) -> dict[str, int]:
+        exploded = self.df["words"].explode()
+        exploded = exploded[exploded.apply(lambda x: isinstance(x, str))]
+        return dict(Counter("".join(word[-1] for word in exploded)))
 
 
 class DataVisualizer:
@@ -628,7 +644,6 @@ class DataVisualizer:
                     percents.append(amount / total_amount * 100)
                 authors.insert(0, "Rest")
                 percents.insert(0, 100 - sum(percents))
-                ax: Axes  # type: Axes
                 y_pos = np.arange(len(authors))
                 ax.barh(y_pos, percents, 0.8, align="edge")
                 ax.set_yticks([i + 0.45 for i in y_pos], authors)
@@ -685,7 +700,7 @@ class DataVisualizer:
         """
         relevant_authors = self.data_extractor.get_authors_sorted_by_emojis()[
             :n]
-        relevant_authors_emoji_distribution = {}
+        relevant_authors_emoji_distribution: dict = {}  # type: ignore[type-arg]  # noqa
         for author in relevant_authors:
             relevant_authors_emoji_distribution = (
                 self.data_extractor.merge_dict(
@@ -844,7 +859,7 @@ class DataVisualizer:
             ) for author in authors
         ]
         fig, ax = plt.subplots(layout="constrained")
-        y_pos = np.arange(len(authors)) 
+        y_pos = np.arange(len(authors))
         ax.barh(y_pos, quotes, 0.8, align="edge")
         ax.set_yticks(
             [i + 0.4 for i in y_pos],
@@ -919,7 +934,7 @@ class DataVisualizer:
                 raise ValueError(
                     "data_period_end may not exceed the total number of posts"
                 )
-        elif data_period_type == "pages":
+        elif data_period_type == "page":
             if data_period_start < 1:
                 raise ValueError("data_period_start must be at least 1")
             elif data_period_start >= math.ceil(
@@ -990,7 +1005,7 @@ class DataVisualizer:
         required_posts_to_goal = goal - self.data_extractor.messages
         required_days = required_posts_to_goal / posts_per_day
 
-        posts_per_day_in_period = []
+        posts_per_day_in_period: list[float] = []
         with self.data_extractor.change_df(
             self.data_extractor.select_messages_within_time_range(
                 start_dt.timestamp(), end_dt.timestamp()
@@ -1049,7 +1064,7 @@ class DataVisualizer:
         )
         return fig
 
-    def authors_per_year_bar(self):
+    def authors_per_year_bar(self) -> Figure:
         """
         <plot>
         Create a vertical bar chart showcasing the amount of unique authors
@@ -1076,7 +1091,7 @@ class DataVisualizer:
         )
         return fig
 
-    def posts_per_author_per_year_bar(self):
+    def posts_per_author_per_year_bar(self) -> Figure:
         """
         <plot>
         Create a vertical bar chart showcasing the amount of messages per
@@ -1105,7 +1120,7 @@ class DataVisualizer:
         )
         return fig
 
-    def top_n_words_per_message_bar(self, n: int = 10):
+    def top_n_words_per_message_bar(self, n: int = 10) -> Figure:
         """
         <plot>
         Create a vertical bar chart showing the top n authors measured by words
@@ -1136,5 +1151,87 @@ class DataVisualizer:
         ax.set_yticks(
             [i + 0.4 for i in y_pos],
             labels=authors,
+        )
+        return fig
+
+    def letter_occurrences_barh(
+        self,
+        mode: Literal["count_all", "count_first", "count_last"] = "count_all",
+        chars: Optional[str] = string.ascii_lowercase + "äöüß",
+        case_insensitive: bool = True,
+    ) -> Figure:
+        """
+        <plot>
+        Create a horizontal bar chart displaying information about specified
+        characters.
+
+        :param mode: How to count. If "count_all", this will count all
+        occurrences of the characters. If "count_first", this will count all
+        occurrences of the characters being the first of a word. "count_last"
+        does the same with the last of the word, defaults to "count_all"
+        :type mode: Literal["count_all", "count_first", "count_last"], optional
+        :param chars: A string of all characters to search for. None means all
+        characters, defaults to a-z and äöüß (lowercase only)"
+        :type chars: Optional[str], optional
+        :param case_insensitive: If True, both lower and uppercase count as the
+        same character, defaults to True
+        :type case_insensitive: bool, optional
+        :return: The horizontal bar chart.
+        :rtype: Figure
+        """
+        if mode not in ("count_all", "count_first", "count_last"):
+            raise ValueError(
+                "mode must be one of count_all, count_first, count_last"
+            )
+
+        if mode == "count_all":
+            counted_characters = self.data_extractor.count_characters()
+        elif mode == "count_first":
+            counted_characters = self.data_extractor.count_first_characters()
+        else:
+            counted_characters = self.data_extractor.count_last_characters()
+        if chars:
+            if not case_insensitive:
+                counted_characters = {
+                    k: v for k, v in counted_characters.items() if k in chars
+                }
+            else:
+                counted_characters = {
+                    k: v for k, v in counted_characters.items() if k.lower()
+                    in chars.lower()
+                }
+        if case_insensitive:
+            temp: dict[str, int] = {}
+            for k, v in counted_characters.items():
+                if k.lower() in temp:
+                    temp[k.lower()] += v
+                else:
+                    temp[k.lower()] = v
+            counted_characters = temp
+        counted_characters = {
+            k: v for k, v in sorted(
+                counted_characters.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+        }
+
+        characters = tuple(counted_characters.keys())
+        counts = tuple(counted_characters.values())
+        fig, ax = plt.subplots()
+        y_pos = np.arange(len(counted_characters))
+        ax.barh(y_pos, counts, 0.8, align="edge")
+        ax.set_yticks(
+            [i + 0.4 for i in y_pos],
+            labels=characters,
+        )
+        if mode == "count_all":
+            fig.suptitle("Buchstabenvorkommen insgesamt")
+        elif mode == "count_first":
+            fig.suptitle("Buchstabenvorkommen erster Buchstabe")
+        else:
+            fig.suptitle("Buchstabenvorkommen letzter Buchstabe")
+        fig.set_size_inches(
+            fig.get_size_inches()[0], 2 + 0.2 * len(characters)
         )
         return fig

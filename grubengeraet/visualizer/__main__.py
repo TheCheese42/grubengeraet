@@ -27,6 +27,40 @@ def parse_range(rangestring: str) -> range:
     return range(*nums)
 
 
+def str2bool(string: str, return_false_on_error: bool = False) -> bool:
+    """Parses a string for a boolean value.
+
+    Args:
+        string (str): The string to be parsed.
+        return_false_on_error (bool, optional): Wether an exception should be
+        raised when the string is unidentifiable or not. If `True` no exception
+        will be raised and the function returns `None`. Defaults to False.
+
+    Raises:
+        ValueError: The string is unidentifiable. Only raises when
+        `return_false_on_error` is set to `False`.
+
+    Returns:
+        bool: The parsed boolean.
+    """
+    true = ["true", "t", "1", "y", "yes", "enabled", "enable", "on"]
+    false = ["false", "f", "0", "n", "no", "disabled", "disable", "off"]
+    try:
+        if string.lower() in true:
+            out = True
+        elif string.lower() in false or return_false_on_error:
+            out = False
+        else:
+            raise ValueError(
+                f"The value {string} cannot be mapped to boolean."
+            )
+    except AttributeError:
+        if return_false_on_error:
+            return False
+        raise TypeError(f"The value {string} is not a string.")
+    return out
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="Grubengerät-visualizer",
@@ -133,11 +167,11 @@ if __name__ == "__main__":
               "version of Grubengerät.")
         sys.exit(1)
 
-    visualizer = visualizer.DataVisualizer(
+    visualizer_ = visualizer.DataVisualizer(
         data_extractor=visualizer.DataExtractor(df)
     )
     try:
-        method = getattr(visualizer, args.format)
+        method = getattr(visualizer_, args.format)
     except AttributeError:
         print("Invalid visualization method. Use --help to get a list of "
               "valid methods.")
@@ -154,6 +188,10 @@ if __name__ == "__main__":
                 option[1] = int(option[1])
             elif option[1].replace(".", "", 1).isdigit():
                 option[1] = float(option[1])
+            try:
+                option[1] = str2bool(option[1])
+            except ValueError:
+                pass
             parameters[option[0]] = option[1]
 
     visualization = method(**parameters)

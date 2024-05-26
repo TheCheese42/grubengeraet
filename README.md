@@ -125,7 +125,7 @@ Gibt eine BBCode Tabelle aus, mit allen auftretenden Emojis sortiert nach Häufi
 
 #### top_n_pie
 
-Ein Kuchendiagramm, dass die Top n Autoren darstellt, entweder anhand von Beiträgen oder Wörtern.
+Ein Kuchendiagramm, das die Top n Autoren darstellt, entweder anhand von Beiträgen oder Wörtern.
 
 `n`: Anzahl Personen, die dargestellt werden sollen.
 `criterion`: `messages` oder `words`.
@@ -140,7 +140,7 @@ Ein horizontales Balkendiagramm pro Jahr, zeigt die Top Autoren in Sachen Beitr�
 
 #### emojis_pie_top_n
 
-Kuchendiagramm, dass die Top n Emojis anhand ihrer Häufigkeit angibt.
+Kuchendiagramm, das die Top n Emojis anhand ihrer Häufigkeit angibt.
 
 `n`: Anzahl gezeigter Emojis.
 
@@ -187,14 +187,22 @@ Liniendiagramm, mit dem ein Trend visualisiert wird. Es wird vorhergesagt, wann 
 
 #### authors_per_year_bar
 
-Vertikales Balkendiagramm, dass die Anzahl verschiedener Teilnehmer eines Threads pro Jahr darstellt.
+Vertikales Balkendiagramm, das die Anzahl verschiedener Teilnehmer eines Threads pro Jahr darstellt.
 
 #### posts_per_author_per_year_bar
 
-Vertikales Balkendiagramm, dass die Anzahl Nachrichten pro Teilnehmer pro Jahr darstellt.
+Vertikales Balkendiagramm, das die Anzahl Nachrichten pro Teilnehmer pro Jahr darstellt.
 
 #### top_n_words_per_message_bar
 
-Horizontales Balkendiagramm, dass die Top n Autoren in Sachen Wörter pro Beitrag darstellt.
+Horizontales Balkendiagramm, das die Top n Autoren in Sachen Wörter pro Beitrag darstellt.
 
 `n`: Anzahl Autoren, die dargestellt werden sollen.
+
+#### letter_occurrences_barh
+
+Horizontales Balkendiagramm, das Zeichen sortiert nach Häufigkeit angibt.
+
+`mode`: Wie soll gezählt werden: `count_all` - Einfach alle Zeichen, die in Wörtern vorkommen (Satzzeichen sind hier normal nicht dabei), zählen. `count_first` - Alle Zeichen am Wortanfang zählen. `count_last` - Alle Zeichen am Wortende zählen. Standartmäßig `count_all`.
+`chars`: Ein string aller Charaktere, die gezählt werden sollen. Standartmäßig a-z, sowie äöüß.
+`case_insensitive`: Ob Groß- und Kleinbuchstaben getrennt gezählt werden sollen. Standartmäßig True.
