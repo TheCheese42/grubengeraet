@@ -7,7 +7,7 @@ Web scraper und Statistiker für das UnlimitedWorld.de Forum.
 Linux/MacOS:
 
 ```sh
-git clone https://github.com/NotYou404/grubengeraet/
+git clone https://github.com/TheCheese42/grubengeraet/
 cd grubengeraet
 python3 -m venv .venv
 source .venv/bin/activate
@@ -17,7 +17,7 @@ python3 -m pip install -r requirements.txt
 Windows:
 
 ```sh
-git clone https://github.com/NotYou404/grubengeraet/
+git clone https://github.com/TheCheese42/grubengeraet/
 cd grubengeraet
 python -m venv .venv
 .venv/Scripts/activate.ps1
