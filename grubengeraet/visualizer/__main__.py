@@ -188,10 +188,11 @@ if __name__ == "__main__":
                 option[1] = int(option[1])
             elif option[1].replace(".", "", 1).isdigit():
                 option[1] = float(option[1])
-            try:
-                option[1] = str2bool(option[1])
-            except ValueError:
-                pass
+            else:
+                try:
+                    option[1] = str2bool(option[1])
+                except ValueError:
+                    pass
             parameters[option[0]] = option[1]
 
     visualization = method(**parameters)
