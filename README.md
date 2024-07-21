@@ -42,10 +42,10 @@ python -m grubengeraet.miner --url https://unlimitedworld.de/threads/wer-als-let
 Oder:
 
 ```sh
-python -m grubengeraet.miner --pre-defined wala --threaded
+python -m grubengeraet.miner --pre-defined WALA --threaded
 ```
 
-Die Seiten landen standartmäßig im `.html_content` Verzeichnis.
+Die Seiten landen standartmäßig im `.html_content` Verzeichnis. Sollte dieses nicht existieren, muss es manuell erstellt werden.
 
 Durch das weglassen der `--threaded` flag werden die Seiten linear, nacheinander heruntergeladen. Dies dauert bei großen Threads aber sehr lange.
 
