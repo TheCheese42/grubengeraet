@@ -42,11 +42,18 @@ def fetch_new_pages(
     )
     last_page = get_last_page(base_url)
 
-    fetch_and_save_pages_concurrently(
-        base_url=base_url,
-        pages=range(last_available_page, last_page + 1),
-        working_dir=working_dir,
-    )
+    if threaded:
+        fetch_and_save_pages_concurrently(
+            base_url=base_url,
+            pages=range(last_available_page, last_page + 1),
+            working_dir=working_dir,
+        )
+    else:
+        fetch_and_save_pages_linearly(
+            base_url=base_url,
+            pages=range(last_available_page, last_page + 1),
+            working_dir=working_dir,
+        )
 
 
 def fetch_and_save_all_pages_concurrently(

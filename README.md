@@ -62,12 +62,12 @@ python -m grubengeraet.extractor --output data.json
 
 Nun sind alle wichtigen Daten in der `data.csv` Datei gesammelt.
 
-Alternativ kann auch nur ein bestimmter Bereich analysiert werden. Dies wird mit den `--pagerange` und `--postrange` Funktionen erreicht. Sie müssen in Anführungszeichen übergeben werden und haben das format `"start,stop,step"`, wobei `stop` exklusiv und `step` optional ist.
+Alternativ kann auch nur ein bestimmter Bereich analysiert werden. Dies wird mit den `--pagerange` und `--postrange` Funktionen erreicht. Sie müssen in Anführungszeichen übergeben werden und haben das format `"start,stop,step"`, wobei `stop` exklusiv und `step` optional ist. Auch parallele Verarbeitung wird unterstützt mit dem `--jobs` parameter.
 
 Beispiel:
 
 ```sh
-python -m grubengeraet.extractor --output data.json --pagerange "100,1001"
+python -m grubengeraet.extractor --output data.json --pagerange "100,1001" --jobs 4
 ```
 
 Hier werden nur Beiträge, die auf den Seiten 100 bis 1000 liegen berücksichtigt.

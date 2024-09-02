@@ -5,7 +5,6 @@
 import copy
 import datetime as dt
 import math
-import string
 import sys
 from pathlib import Path
 from typing import Optional
@@ -195,20 +194,25 @@ def construct_dataframe(
             )
             mentions_count = len(mentioned_list)
 
-            # Must come before insert_dot_after_last_emoji()
-            emoji_frequency_mapping = (
-                get_mapping_of_emojis_and_frequency(unmodified_message)
-            )
-            emoji_count = sum(i for i in emoji_frequency_mapping.values())
-
             like_count = get_amount_of_likes(message)  # modifies
 
             clean_noisy_tags(message)  # modifies
 
-            content = content_tag.get_text(strip=True)  # needs modified
+            # Must come before clean_emojis()
+            emoji_frequency_mapping = (
+                get_mapping_of_emojis_and_frequency(message)  # Needs cleaned
+            )
+            emoji_count = sum(i for i in emoji_frequency_mapping.values())
 
-            word_count = get_amount_of_words(content_tag)
-            words = split_words(content_tag)
+            clean_emojis(message)  # modifies
+
+            # Can't use built in strip=True argument here as that would strip
+            # spaces around HTML tags within the content, resulting in a loss
+            # of important spaces leading to rule violations.
+            content = content_tag.get_text().strip()  # needs modified
+
+            words = split_words(content)
+            word_count = len(words)
 
             rules_compliance_check_result = rules_reworked(content, word_count)
             rulebreak_reasons = [
@@ -245,19 +249,20 @@ def construct_dataframe(
             )
             series_list.append(message_series)
 
-    if pagerange:
-        index = range(
-            get_first_post_from_page(pagerange[0]),
-            get_last_post_from_page(pagerange[-1]) + 1,
-        )
-    elif postrange:
-        index = postrange
-    else:
-        index = None
+    # XXX Seems important but causes error when the last page is shorter
+    # if pagerange:
+    #     index = range(
+    #         get_first_post_from_page(pagerange[0]),
+    #         get_last_post_from_page(pagerange[-1]) + 1,
+    #     )
+    # elif postrange:
+    #     index = postrange
+    # else:
+    #     index = None
 
     df = pd.DataFrame(
         series_list,
-        index=index,
+        index=None,
         columns=COLUMNS,
         copy=False,
     )
@@ -356,20 +361,6 @@ def clean_noisy_tags(message: bs4.element.Tag) -> None:
     Args:
         message (bs4.element.Tag): The message's element tag object.
     """
-    # ## Use data-shortname instead of alt, as unicode emojis will have their
-    # ## actual symbol in alt, while having the description in data-shortname.
-    # Turn emojis into their alt
-    for emoji in message.find_all("img", class_="smilie"):
-        try:
-            emoji.insert_after(".")  # Use emojis as Sentence delimiter
-            alt = emoji["data-shortname"]
-            emoji.insert_before(alt)
-            emoji.decompose()
-        except (TypeError, ValueError):
-            # Rare error of a corrupted image tag (?)
-            # Just ignoring, it's all @fscript's fault.
-            pass
-
     # Media Tags have a noisy "Ansehen auf" string.
     for p in message.find_all("p"):
         if p.get_text(strip=True) == "Ansehen auf":
@@ -382,7 +373,8 @@ def clean_noisy_tags(message: bs4.element.Tag) -> None:
         ("script", None),
         ("table", None),
         ("blockquote", None),
-        ("div", "message-lastEdit")
+        ("div", "message-lastEdit"),
+        ("button", None),
     ]
     for tag, class_ in useless_tags:
         if class_:
@@ -391,6 +383,29 @@ def clean_noisy_tags(message: bs4.element.Tag) -> None:
             all_tags = message.find_all(tag)
         for find in all_tags:
             find.decompose()
+
+
+def clean_emojis(message: bs4.element.Tag) -> None:
+    """Replaces emojis with dots.
+
+    Args:
+        message (bs4.element.Tag): The message's element tag object.
+    """
+    # ## Use data-shortname instead of alt, as unicode emojis will have their
+    # ## actual symbol in alt, while having the description in data-shortname.
+    # Turn emojis into their alt
+    for emoji in message.find_all("img", class_="smilie"):
+        try:
+            emoji.insert_after(".")  # Use emojis as Sentence delimiter
+            # XXX Would make emojis count as an additional word, possibly
+            # XXX breaking the rules if at the beginning of the post (?)
+            # XXX alt = emoji["data-shortname"]
+            # XXX emoji.insert_before(alt)
+            emoji.decompose()
+        except (TypeError, ValueError):
+            # Rare error of a corrupted image tag (?)
+            # Just ignoring, it's all @fscript's fault.
+            pass
 
 
 def get_amount_of_quotes(message: bs4.element.Tag) -> int:
@@ -453,30 +468,6 @@ def get_list_of_mentioned_ids(message: bs4.element.Tag) -> list[str]:
     return ids
 
 
-def get_amount_of_words(content: bs4.element.Tag) -> int:
-    """Retrieves the amount of words in a message.
-
-    Args:
-        content (bs4.element.Tag): The message content's element tag object.
-
-    Returns:
-        int: The word count.
-    """
-    return len(_split_words(content.get_text(strip=True)))
-
-
-def split_words(content: bs4.element.Tag) -> list[str]:
-    """Splits a message into individual words.
-
-    Args:
-        content (bs4.element.Tag): The message content's element tag object.
-
-    Returns:
-        int: The word count.
-    """
-    return _split_words(content.get_text(strip=True))
-
-
 def get_mapping_of_emojis_and_frequency(
     message: bs4.element.Tag
 ) -> dict[str, int]:
@@ -498,7 +489,7 @@ def get_mapping_of_emojis_and_frequency(
     return emojis
 
 
-def _split_words(string_: str) -> list[str]:
+def split_words(string_: str) -> list[str]:
     """Counts the amount of words in a string by utilizing the
     re.split() method. Splits on any whitespace character and
     discards empty strings.

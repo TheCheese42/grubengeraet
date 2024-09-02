@@ -121,7 +121,9 @@ if __name__ == "__main__":
 
     try:
         if args.threaded:
-            print(f"Paralleles Laden: Aktiviert (Chunk size: {args.chunk_size})")
+            print(
+                f"Paralleles Laden: Aktiviert (Chunk size: {args.chunk_size})"
+            )
             if args.new_pages_only:
                 print("Nur neue Seiten: Aktiviert.")
                 miner.fetch_new_pages(  # type: ignore
@@ -137,7 +139,7 @@ if __name__ == "__main__":
             print("Paralleles Laden: Deaktiviert.")
             if not args.silent:
                 print("Um den Prozess zu beschleunigen, benutze die "
-                      "--parallel flag.")
+                      "--threaded flag.")
             if args.new_pages_only:
                 print("Nur neue Seiten: Aktiviert.")
                 miner.fetch_new_pages(  # type: ignore
