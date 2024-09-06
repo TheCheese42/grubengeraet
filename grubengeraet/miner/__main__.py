@@ -145,15 +145,16 @@ if __name__ == "__main__":
                 miner.fetch_new_pages(  # type: ignore
                     args.url, working_dir=args.path, threaded=args.threaded
                 )
-            miner.fetch_and_save_all_pages_linearly(
-                base_url=args.url,
-                working_dir=args.path,
-            )
+            else:
+                miner.fetch_and_save_all_pages_linearly(
+                    base_url=args.url,
+                    working_dir=args.path,
+                )
     except KeyboardInterrupt:
         print("Abgebrochen wegen KeyboardInterrupt.")
         sys.exit(1)
 
     print(
-        f"{miner.get_last_page(args.url)} wurden nach "
+        f"{miner.get_last_page(args.url)} Seiten wurden nach "
         f"{args.path.resolve()} gespeichert."
     )
