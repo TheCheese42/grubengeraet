@@ -16,12 +16,9 @@ import regex as re  # See rules_reworked()
 
 from .emojis import is_emoji
 
-WHITESPACES = r"\xad͏\u061cᅟᅠ឴឵\u180e\u2000\u2001\u2002\u2003\u2004\u2005"\
-              r"\u2006"\
-              r"\u2007\u2008\u2009\u200a\u200b\u200c\u200d\u200e\u200f \u205f"\
-              r"\u2060\u2061\u2062\u2063\u2064\u206a\u206b\u206c\u206d\u206e"\
-              r"\u206f\u3000\ufeff"\
-              r"\ufe0f\ufe0f"\
+WHITESPACES = [
+  chr(i) for i in [847, 4447, 4448, 6068, 6069, 32]
+]
 
 # Source: https://de.m.wikipedia.org/wiki/Satzzeichen
 PUNCTUATION = r".?!\"„“‚‘»«‹›,;:'’–—‐\-·/\()\[\]<>{}…☞‽¡¿⸘、"
