@@ -16,9 +16,9 @@ import regex as re  # See rules_reworked()
 
 from .emojis import is_emoji
 
-WHITESPACES = [
+WHITESPACES = "".join([
   chr(i) for i in [847, 4447, 4448, 6068, 6069, 32]
-]
+])
 
 # Source: https://de.m.wikipedia.org/wiki/Satzzeichen
 PUNCTUATION = r".?!\"„“‚‘»«‹›,;:'’–—‐\-·/\()\[\]<>{}…☞‽¡¿⸘、"
