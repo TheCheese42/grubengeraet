@@ -51,7 +51,7 @@ class DataExtractor:
             selected = df.loc[start:end]
         else:
             selected = df
-        self.df = selected
+        self.df = selected.copy()
 
         self.df["author_id"] = self.df["author_id"].astype(str)
         self.df["creation_datetime"] = self.df["creation_datetime"].astype(str)

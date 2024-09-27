@@ -167,9 +167,8 @@ if __name__ == "__main__":
               "version of Grubengerät.")
         sys.exit(1)
 
-    visualizer_ = visualizer.DataVisualizer(
-        data_extractor=visualizer.DataExtractor(df)
-    )
+    de = visualizer.DataExtractor(df, **range_arg)
+    visualizer_ = visualizer.DataVisualizer(data_extractor=de)
     try:
         method = getattr(visualizer_, args.format)
     except AttributeError:
