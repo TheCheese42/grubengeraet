@@ -95,7 +95,7 @@ if __name__ == "__main__":
         help="Ausgabedatei für die generierten Visualisierungen. "
              "Visualisierungen, die als printable markiert sind, kommen utf-8 "
              "codiert in eine Textdatei. Alle, die als plot markiert sind, "
-             "gehören in eine binäre Bilddatei.\n"
+             "gehören in eine Bilddatei.\n"
              "Standartmäßig werden printable Visualisierungen zum stdout "
              "ausgegeben, plots werden im show tool von Matplotlib angezeigt.",
         dest="output",
