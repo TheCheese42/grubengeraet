@@ -84,10 +84,20 @@ class DataExtractor:
         return self.words / self.messages
 
     @property
+    def rule_violations(self) -> int:
+        return len(self.df[self.df["is_rules_compliant"] == False])  # noqa[E712]
+
+    @property
     def first_year(self) -> int:
         return datetime.fromisoformat(
             self.df.head(1).iloc[0]["creation_datetime"]
         ).year
+
+    @property
+    def first_month(self) -> int:
+        return datetime.fromisoformat(
+            self.df.head(1).iloc[0]["creation_datetime"]
+        ).month
 
     @property
     def first_timestamp(self) -> int:
@@ -100,6 +110,12 @@ class DataExtractor:
         return datetime.fromisoformat(
             self.df.tail(1).iloc[0]["creation_datetime"]
         ).year
+
+    @property
+    def last_month(self) -> int:
+        return datetime.fromisoformat(
+            self.df.tail(1).iloc[0]["creation_datetime"]
+        ).month
 
     @property
     def last_timestamp(self) -> int:
@@ -170,9 +186,9 @@ class DataExtractor:
         """
         return len(self.select_messages_from_author(author))
 
-    def get_rule_violating_messages_from_author(self, author: str) -> int:
+    def get_rv_messages_from_author(self, author: str) -> int:
         posts = self.select_messages_from_author(author)
-        return len(posts[posts["is_rules_compliant"] == False])  # noqa
+        return len(posts[posts["is_rules_compliant"] == False])  # noqa[E712]
 
     def get_authors_sorted_by_messages(self) -> list[str]:
         """
@@ -192,13 +208,17 @@ class DataExtractor:
         }
         return list(authors_to_messages.keys())
 
-    def get_author_sorted_by_rule_violations_percentage(self) -> list[str]:
+    def get_author_sorted_by_rv_percent(
+        self, min_posts: int = 0,
+    ) -> list[str]:
         authors = self.get_authors()
         authors_to_rule_violations_percentage = {}
         for author in authors:
             posts = self.get_messages_from_author(author)
+            if posts < min_posts:
+                continue
             rule_violations = (
-                self.get_rule_violating_messages_from_author(author)
+                self.get_rv_messages_from_author(author)
             )
             authors_to_rule_violations_percentage[author] = (
                 rule_violations / posts
@@ -215,6 +235,13 @@ class DataExtractor:
     def select_messages_for_year(self, year: int) -> pd.DataFrame:
         condition = self.df["creation_datetime"].apply(
             lambda x: datetime.fromisoformat(str(x)).year == year
+        )
+        return self.df[condition]
+
+    def select_messages_for_month(self, year: int, month: int) -> pd.DataFrame:
+        condition = self.df["creation_datetime"].apply(
+            lambda x: datetime.fromisoformat(str(x)).year == year
+            and datetime.fromisoformat(str(x)).month == month
         )
         return self.df[condition]
 
@@ -372,7 +399,7 @@ class DataExtractor:
 
     def get_authors_sorted_by_mentions(self) -> list[str]:
         authors = self.df.apply(
-            lambda x: x["author"] if x["mentioned_list"] else None, axis=1
+            lambda x: x["author"] if x["mentioned_list"] else False, axis=1
         )
         authors_to_mentions = dict(Counter(authors))
         authors_to_mentions = {
@@ -386,7 +413,7 @@ class DataExtractor:
 
     def get_authors_sorted_by_quotes(self) -> list[str]:
         authors = self.df.apply(
-            lambda x: x["author"] if x["quoted_list"] else None, axis=1
+            lambda x: x["author"] if x["quoted_list"] else False, axis=1
         )
         authors_to_quotes = dict(Counter(authors))
         authors_to_quotes = {
@@ -400,13 +427,13 @@ class DataExtractor:
 
     def get_amount_of_mentions(self, author: str) -> int:
         authors = self.df.apply(
-            lambda x: x["author"] if x["mentioned_list"] else None, axis=1
+            lambda x: x["author"] if x["mentioned_list"] else False, axis=1
         )
         return Counter(authors)[author]
 
     def get_amount_of_quotes(self, author: str) -> int:
         authors = self.df.apply(
-            lambda x: x["author"] if x["quoted_list"] else None, axis=1
+            lambda x: x["author"] if x["quoted_list"] else False, axis=1
         )
         return Counter(authors)[author]
 
@@ -446,7 +473,7 @@ class DataVisualizer:
             str: The table using BBCode syntax.
         """
         table = "\
-            [TABLE=full][TR][TD]Spieler[/TD][TD]Anzahl Beiträge[/TD]\
+            [TABLE ttstyle=full][TR][TD]Spieler[/TD][TD]Anzahl Beiträge[/TD]\
             [TD]Anzahl nicht regelkonformer Beiträge[/TD]\
             [TD]Prozentanzahl nicht regelkonformer Beiträge[/TD][/TR]"
 
@@ -454,7 +481,7 @@ class DataVisualizer:
         for author in authors_sorted:
             messages = self.data_extractor.get_messages_from_author(author)
             rules_violating_messages = (
-                self.data_extractor.get_rule_violating_messages_from_author(
+                self.data_extractor.get_rv_messages_from_author(
                     author
                 )
             )
@@ -485,18 +512,18 @@ class DataVisualizer:
             str: The table using BBCode syntax.
         """
         table = "\
-            [TABLE=full][TR][TD]Spieler[/TD][TD]Anzahl Beiträge[/TD]\
+            [TABLE ttstyle=full][TR][TD]Spieler[/TD][TD]Anzahl Beiträge[/TD]\
             [TD]Anzahl nicht regelkonformer Beiträge[/TD]\
             [TD]Prozentanzahl nicht regelkonformer Beiträge[/TD][/TR]"
         authors_sorted = (
-            self.data_extractor.get_author_sorted_by_rule_violations_percentage
+            self.data_extractor.get_author_sorted_by_rv_percent
         )()
         for author in authors_sorted:
             messages = self.data_extractor.get_messages_from_author(author)
             if messages < n:
                 continue
             rules_violating_messages = (
-                self.data_extractor.get_rule_violating_messages_from_author(
+                self.data_extractor.get_rv_messages_from_author(
                     author
                 )
             )
@@ -523,7 +550,7 @@ class DataVisualizer:
         :rtype: str
         """
         table = "\
-            [TABLE=full][TR][TD]Emoji[/TD][TD]Anzahl[/TD][/TR]"
+            [TABLE ttstyle=full][TR][TD]Emoji[/TD][TD]Anzahl[/TD][/TR]"
         emojis_sorted = (
             self.data_extractor.get_emojis_sorted_by_frequency()
         )
@@ -539,50 +566,139 @@ class DataVisualizer:
 
     def top_n_pie(
         self, n: int = 10,
-        criterion: Literal["messages", "words"] = "messages",
+        criterion: Literal[
+            "messages", "words", "rule_violations"
+        ] = "messages",
         radius: float = 1,
     ) -> Figure:
         """
         <plot>
-        Creates a pie chart showing the top n players measured by amount of
-        messages.
+        Creates a pie chart showing the top n players measured by a selected
+        criterion.
 
         :param n: Amount of players to show, defaults to 10
         :type n: int, optional
         :param criterion: What criterion to sort by, must be one of messages,
-        words
-        :type criterion: Literal["messages", "words"]
+        words, rule_violations
+        :type criterion: Literal["messages", "words", "rule_violations"]
         :return: The chart
         :rtype: Figure
         """
         if criterion == "messages":
             authors = self.data_extractor.get_authors_sorted_by_messages()[:n]
+        elif criterion == "rule_violations":
+            authors = self.data_extractor.get_author_sorted_by_rv_percent(50)[:n]  # noqa[E501]
         else:
             authors = self.data_extractor.get_authors_sorted_by_words()[:n]
         percents = []
         if criterion == "messages":
             total_amount = self.data_extractor.messages
+        elif criterion == "rule_violations":
+            total_amount = 1.0
         else:
             total_amount = self.data_extractor.words
 
         for author in authors:
             if criterion == "messages":
                 amount = self.data_extractor.get_messages_from_author(author)
+            elif criterion == "rule_violations":
+                amount = (
+                    self.data_extractor.get_rv_messages_from_author(author)
+                    / self.data_extractor.get_messages_from_author(author)
+                )
             else:
                 amount = self.data_extractor.get_words_from_author(author)
             percents.append(amount / total_amount)
-        authors.insert(0, "Rest")
-        percents.insert(0, 1 - sum(percents))
+        if criterion == "rule_violations":
+            authors.insert(0, "Durchschnitt")
+            percents.insert(
+                0, self.data_extractor.rule_violations
+                / self.data_extractor.messages
+            )
+        else:
+            authors.insert(0, "Rest")
+            percents.insert(0, 1 - sum(percents))
         fig, ax = plt.subplots()
-        fig.suptitle(f"Top {n} Spieler nach Anzahl " +
-                     ("Beiträgen" if criterion == "messages"
-                      else "Wörtern"))
+        fig.suptitle(f"Top {n} Spieler nach " +
+                     ("Anzahl Beiträge" if criterion == "messages"
+                      else "Anzahl Wörter" if criterion == "words"
+                      else "Anteil Regelverstöße"))
         ax.pie(percents, labels=authors, autopct='%1.1f%%', radius=radius)
+        return fig
+
+    def top_n_bar(
+        self,
+        n: int = 10,
+        criterion: Literal[
+            "messages", "words", "rule_violations"
+        ] = "messages",
+    ) -> Figure:
+        """
+        <plot>
+        Creates a horizontal bar chart showing the top n players measured by
+        a selected criterion. Only counts players with at least 50 messages
+        if the criterion is 'rule_violations'.
+
+        :param n: Amount of players to show, defaults to 10
+        :type n: int, optional
+        :param criterion: What criterion to sort by, must be one of messages,
+        words, rule_violations
+        :type criterion: Literal["messages", "words", "rule_violations"]
+        :return: The chart
+        :rtype: Figure
+        """
+        if criterion == "messages":
+            authors = self.data_extractor.get_authors_sorted_by_messages()[:n]
+        elif criterion == "rule_violations":
+            authors = self.data_extractor.get_author_sorted_by_rv_percent(50)[:n]  # noqa[E501]
+        else:
+            authors = self.data_extractor.get_authors_sorted_by_words()[:n]
+        authors = list(reversed(authors))
+
+        amounts = []
+        for author in authors:
+            if criterion == "messages":
+                amounts.append(
+                    self.data_extractor.get_messages_from_author(author)
+                )
+            elif criterion == "rule_violations":
+                amounts.append(
+                    1 - self.data_extractor.get_rv_messages_from_author(author)
+                    / self.data_extractor.get_messages_from_author(author)
+                )
+            else:
+                amounts.append(
+                    self.data_extractor.get_words_from_author(author)
+                )
+        if criterion == "rule_violations":
+            authors.append("Durchschnitt")
+            amounts.append(
+                1 - self.data_extractor.rule_violations
+                / self.data_extractor.messages
+            )
+        elif criterion == "messages":
+            authors.append("Rest")
+            amounts.append(self.data_extractor.messages - sum(amounts))
+        else:
+            authors.append("Rest")
+            amounts.append(self.data_extractor.words - sum(amounts))
+        fig, ax = plt.subplots()
+        x_pos = np.arange(len(authors))
+        ax.bar(x_pos, amounts, 0.8, align="edge")
+        ax.set_xticks([i + 0.4 for i in x_pos], authors, rotation=45)
+        ax.set_ylabel(
+            "Anzahl Beiträge" if criterion == "messages"
+            else "Anzahl Wörter" if criterion == "words"
+            else "Anteil regelkonformer Beiträge"
+        )
+        ax.set_title(f"Top {n} Spieler nach {ax.get_ylabel()}")
         return fig
 
     def yearly_top_n_barh_percent(
         self, n: int = 10,
-        criterion: Literal["messages", "words"] = "messages",
+        criterion: Literal[
+            "messages", "words", "rule_violations"
+        ] = "messages",
     ) -> Figure:
         """
         <plot>
@@ -591,8 +707,8 @@ class DataVisualizer:
         :param n: Amount of top players to show, defaults to 10
         :type n: int, optional
         :param criterion: What criterion to sort by, must be one of messages,
-        words
-        :type criterion: Literal["messages", "words"]
+        words, rule_violations
+        :type criterion: Literal["messages", "words", "rule_violations"]
         :return: The chart
         :rtype: Figure
         """
@@ -641,12 +757,18 @@ class DataVisualizer:
                             author
                         )
                     percents.append(amount / total_amount * 100)
-                authors.insert(0, "Rest")
+                authors.insert(0, f"Rest ({self.data_extractor.authors - n})")
                 percents.insert(0, 100 - sum(percents))
                 y_pos = np.arange(len(authors))
                 ax.barh(y_pos, percents, 0.8, align="edge")
                 ax.set_yticks([i + 0.45 for i in y_pos], authors)
-                ax.set_title(f"Top {n} {year}")
+                ax.set_title(f"Top {n} Spieler {year}")
+                ax.text(
+                    max(percents), 8.2,
+                    f"Gesamt: {total_amount} "
+                    f"{'Nachrichten' if criterion == 'messages' else 'Wörter'}",  # noqa[E501]
+                    ha="right",
+                )
                 ax.set_xlabel(
                     ("Nachrichten" if criterion == "messages" else "Wort") +
                     "anteil in %"
@@ -664,7 +786,7 @@ class DataVisualizer:
         :return: The generated pie chart.
         :rtype: Figure
         """
-        emojis = self.data_extractor.get_used_emojis()[:n]
+        emojis = self.data_extractor.get_emojis_sorted_by_frequency()[:n]
         percents = []
         total_emojis = self.data_extractor.get_total_emoji_count()
         for emoji_ in emojis:
@@ -760,7 +882,10 @@ class DataVisualizer:
         else:
             legend_cols = len(relevant_authors_emoji_distribution) // 4
         ax.legend(loc="upper right", ncol=legend_cols)
-        fig.suptitle(f"Emojiverteilung der Top {n} Emojinutzer")
+        ax.set_yscale("log")
+        fig.suptitle(
+            f"Emojiverteilung der Top {n} Emojinutzer (logarithmisch)"
+        )
         fig.set_size_inches(
             1.3 * len(relevant_authors), fig.get_size_inches()[1] * 1.5
         )
@@ -786,7 +911,9 @@ class DataVisualizer:
             labels=[self.data_extractor.lookup_id(id) or id for id in ids]
         )
         ax.set_xlabel("Angepingt")
-        fig.suptitle(f"Most Fame/Der Genervteste\nTop {n} am meisten gepingt")
+        fig.suptitle(
+            f"Most Fame/Der oder die Genervteste\nTop {n} am meisten gepingt"
+        )
         return fig
 
     def top_n_mentions_barh(self, n: int = 10) -> Figure:
@@ -812,7 +939,7 @@ class DataVisualizer:
             labels=authors,
         )
         ax.set_xlabel("Pings")
-        fig.suptitle(f"Der Nervigste\nTop {n} meiste Pings")
+        fig.suptitle(f"Der oder die Nervigste\nTop {n} meiste Pings")
         return fig
 
     def top_n_quoted_barh(self, n: int = 10) -> Figure:
@@ -895,6 +1022,7 @@ class DataVisualizer:
         :param description: Something to add after figure title. Example:
         `"anhand der letzten 30 Tage"` makes the title `"Prognose: {goal}
         anhand der letzten 30 Tage"`
+        :type description: str, optional
         :return: The line chart
         :rtype: Figure
         """
@@ -1063,6 +1191,68 @@ class DataVisualizer:
         )
         return fig
 
+    def posts_per_x_bar(
+        self,
+        x: Literal["year", "month"] = "month",
+    ) -> Figure:
+        """
+        <plot>
+        Create a vertical bar chart showcasing the total amount of messages
+        on a yearly or monthly basis.
+
+        :param x: The time range per bar, must be one of year or month,
+        defaults to month
+        :type x: Literal["year", "month"], optional
+        """
+        x_labels = []
+        if x == "year":
+            x_values = list(range(
+                self.data_extractor.first_year,
+                self.data_extractor.last_year + 1,
+            ))
+            y_values = [
+                len(self.data_extractor.select_messages_for_year(year))
+                for year in x_values
+            ]
+        elif x == "month":
+            num_months = ((
+                    self.data_extractor.last_year
+                    - self.data_extractor.first_year
+                ) * 12 + self.data_extractor.last_month
+                - self.data_extractor.first_month + 1)
+            x_values = []
+            y_values = []
+            year = self.data_extractor.first_year
+            month = self.data_extractor.first_month
+            for _ in range(num_months):
+                x_values.append(_)
+                x_labels.append(year if month == 1 else "")
+                y_values.append(len(
+                    self.data_extractor.select_messages_for_month(year, month)
+                ))
+                month += 1
+                if month > 12:
+                    month = 1
+                    year += 1
+        else:
+            raise ValueError("x must be one of 'year' or 'month'")
+
+        fig, ax = plt.subplots()
+        fig.suptitle(f"Beiträge pro {'Jahr' if x == 'year' else 'Monat'}")
+        bottom = np.zeros(len(x_values))
+        ax.bar(
+            x_values,
+            y_values,
+            0.5,
+            bottom=bottom,
+        )
+        if x == "month":
+            ax.set_xticks(
+                x_values,
+                labels=x_labels,
+            )
+        return fig
+
     def authors_per_year_bar(self) -> Figure:
         """
         <plot>
@@ -1153,7 +1343,7 @@ class DataVisualizer:
         )
         return fig
 
-    def letter_occurrences_barh(
+    def letter_occurrences_bar(
         self,
         mode: Literal["count_all", "count_first", "count_last"] = "count_all",
         chars: Optional[str] = string.ascii_lowercase + "äöüß",
@@ -1218,10 +1408,10 @@ class DataVisualizer:
         characters = tuple(counted_characters.keys())
         counts = tuple(counted_characters.values())
         fig, ax = plt.subplots()
-        y_pos = np.arange(len(counted_characters))
-        ax.barh(y_pos, counts, 0.8, align="edge")
-        ax.set_yticks(
-            [i + 0.4 for i in y_pos],
+        x_pos = np.arange(len(counted_characters))
+        ax.bar(x_pos, counts, 0.8, align="edge")
+        ax.set_xticks(
+            [i + 0.4 for i in x_pos],
             labels=characters,
         )
         if mode == "count_all":
