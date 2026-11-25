@@ -764,7 +764,7 @@ class DataVisualizer:
                 ax.set_yticks([i + 0.45 for i in y_pos], authors)
                 ax.set_title(f"Top {n} Spieler {year}")
                 ax.text(
-                    max(percents), 8.2,
+                    max(percents), n + 0.2,
                     f"Gesamt: {total_amount} "
                     f"{'Nachrichten' if criterion == 'messages' else 'Wörter'}",  # noqa[E501]
                     ha="right",
@@ -801,14 +801,67 @@ class DataVisualizer:
         ax.pie(percents, labels=emojis, autopct='%1.1f%%', radius=radius)
         return fig
 
-    def emoji_distribution_top_n(
+    def yearly_emojis_top_n_barh(
         self, n: int = 10,
-        n_emojis: int = 10,
     ) -> Figure:
         """
         <plot>
-        Creates a horizontal bar chart of the top n emoji user, breaking
-        down what emojis they used.
+        Creates a horizontal bar chart per year showing the top n emojis.
+
+        :param n: Amount of top emojis to show, defaults to 10
+        :type n: int, optional
+        :return: The chart
+        :rtype: Figure
+        """
+        total_years = (
+            self.data_extractor.last_year - self.data_extractor.first_year + 1
+        )
+        cols = 2 if total_years > 1 else 1
+        rows = math.ceil(total_years / 2)
+        fig, axes = plt.subplots(
+            nrows=rows,
+            ncols=cols,
+            layout="constrained",
+            figsize=(4 * cols, 3 * rows)
+        )
+        fig.suptitle(f"Jährliche Top {n} Emojis")
+
+        for year, ax in zip(range(
+            self.data_extractor.first_year,
+            self.data_extractor.last_year + 1,
+        ), chain.from_iterable(axes)):
+            year_df = self.data_extractor.select_messages_for_year(year)
+            with self.data_extractor.change_df(year_df):
+                emojis = self.data_extractor.get_emojis_sorted_by_frequency()[:n]  # noqa[E501]
+                counts = []
+                total_emojis = self.data_extractor.get_total_emoji_count()
+                for emoji_ in emojis:
+                    counts.append(
+                        self.data_extractor.get_emoji_count_for(emoji_)
+                    )
+                emojis.insert(0, "Rest")
+                counts.insert(0, total_emojis - sum(counts))
+                y_pos = np.arange(len(emojis))
+                ax.barh(y_pos, counts, 0.8, align="edge")
+                ax.set_yticks([i + 0.45 for i in y_pos], emojis)
+                ax.set_title(f"Top {n} Emojis {year}")
+                ax.text(
+                    max(counts), n + 0.2,
+                    f"Gesamt: {total_emojis} Emojis",
+                    ha="right",
+                )
+                ax.set_xlabel("Anzahl")
+        return fig
+
+    def emoji_distribution_top_n(
+        self, n: int = 10,
+        n_emojis: int = 10,
+        specific_emoji: str | None = None,
+    ) -> Figure:
+        """
+        <plot>
+        Creates a bar chart of the top n emoji user, breaking down what
+        emojis they used.
 
         :param n: How many emoji users shall be included in the char, defaults
         to 10
@@ -816,9 +869,15 @@ class DataVisualizer:
         :param n_emojis: How many different emojis should be shown, rest goes
         into others. 0 to include all emojis, defaults to 10
         :type n_emojis: int, optional
+        :param specific_emoji: Add this specific emoji to the Axes. Use '.'
+        instead of ':', e.g. '.waaah.' instead of ':waaah:', defaults to None
+        :type specific_emoji: str | None, optional
         :return: The generated barh chart,
         :rtype: Figure
         """
+        if specific_emoji:
+            specific_emoji = specific_emoji.replace(".", ":")
+
         relevant_authors = self.data_extractor.get_authors_sorted_by_emojis()[
             :n]
         relevant_authors_emoji_distribution: dict = {}  # type: ignore[type-arg]  # noqa
@@ -837,12 +896,21 @@ class DataVisualizer:
             reverse=True,
         )}
 
+        specific_emoji_count = None
+        if specific_emoji:
+            specific_emoji_count = relevant_authors_emoji_distribution.get(
+                specific_emoji, 0
+            )
         if n_emojis:
             relevant_authors_emoji_distribution = {
                 k: v for k, v in list(
                     relevant_authors_emoji_distribution.items()
                 )[:n_emojis]
             }
+        if specific_emoji is not None:
+            relevant_authors_emoji_distribution[specific_emoji] = (
+                specific_emoji_count
+            )
 
         weights = {}
         for emoji_ in relevant_authors_emoji_distribution.keys():
@@ -859,32 +927,31 @@ class DataVisualizer:
 
         weights["Andere"] = np.zeros(len(relevant_authors))
         for i, author in enumerate(relevant_authors):
-            weights["Andere"] += sum(list(
+            weights["Andere"][i] += sum(list(
                 self.data_extractor.get_emoji_distribution_for_author(
                     author
                 ).values()
-            )[n_emojis - 1:])
-
-        bottom = np.zeros(len(relevant_authors))
+            )) - sum([val[i] for val in weights.values()])
+        
+        left = np.zeros(len(relevant_authors))
         fig, ax = plt.subplots()
         for emoji_, weight_count in weights.items():
-            ax.bar(
+            ax.barh(
                 relevant_authors,
                 weight_count,
                 0.5,
                 label=emoji_,
-                bottom=bottom,
+                left=left,
             )
-            bottom += weight_count
+            left += weight_count
 
         if n_emojis:
             legend_cols = (n_emojis + 1) // 4
         else:
             legend_cols = len(relevant_authors_emoji_distribution) // 4
         ax.legend(loc="upper right", ncol=legend_cols)
-        ax.set_yscale("log")
         fig.suptitle(
-            f"Emojiverteilung der Top {n} Emojinutzer (logarithmisch)"
+            f"Emojiverteilung der Top {n} Emojinutzer"
         )
         fig.set_size_inches(
             1.3 * len(relevant_authors), fig.get_size_inches()[1] * 1.5
@@ -1175,7 +1242,6 @@ class DataVisualizer:
                 end_dt.timestamp() + required_days * 24 * 60 * 60
             ).strftime(fmt)
         )
-        print(end_dt, seconds/60/60/24)
         fig, ax = plt.subplots()
         ax.plot(posts_per_day_in_period)
         ax.tick_params(axis='x', labelrotation=45)

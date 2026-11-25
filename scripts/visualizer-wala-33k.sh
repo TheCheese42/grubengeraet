@@ -7,7 +7,7 @@ python -m grubengeraet.visualizer -p data.json -o "images/posts_per_year.png" -f
 python -m grubengeraet.visualizer -p data.json -o "images/topnbar_rules.png" -f top_n_bar -fo "criterion:rule_violations"
 python -m grubengeraet.visualizer -p data.json -o "images/rv_table.txt" -f rule_violation_bbtable_np
 python -m grubengeraet.visualizer -p data.json -o "images/topnpie_emojis.png" -f emojis_pie_top_n
-python -m grubengeraet.visualizer -p data.json -o "images/topnbar_emoji_dist.png" -f emoji_distribution_top_n -fo "n_emojis:9"
+python -m grubengeraet.visualizer -p data.json -o "images/topnbar_emoji_dist.png" -f emoji_distribution_top_n -fo "specific_emoji:.waaah."
 python -m grubengeraet.visualizer -p data.json -o "images/topnbar_mentioned.png" -f top_n_mentioned_barh
 python -m grubengeraet.visualizer -p data.json -o "images/topnbar_mentions.png" -f top_n_mentions_barh
 python -m grubengeraet.visualizer -p data.json -o "images/topnbar_quoted.png" -f top_n_quoted_barh
